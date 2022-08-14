@@ -8,6 +8,7 @@ Cinevie API would support following endpoints and actions:
 
 # DIRECTORY STRUCTURE
 
+```
 .
 ├── bin
 ├── cmd
@@ -19,6 +20,7 @@ Cinevie API would support following endpoints and actions:
 ├── migrations
 ├── README.md
 └── remote
+```
 
 bin/
 contain compiled application binaries for deployment
