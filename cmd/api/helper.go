@@ -21,7 +21,12 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
   return id, nil
 }
 
-func (app *application) writeJSON(w http.ResponseWriter, status int, data interface{}, headers http.Header) error {
+// wrap the encoded JSON with parent key name of data
+// it's a self documenting, clarity about what data is
+// about and mitigate a security vulnerability in older browser
+type envelope map[string]interface{}
+
+func (app *application) writeJSON(w http.ResponseWriter, status int, data envelope, headers http.Header) error {
   // encode the data into JSON return error if there was one
   js, err := json.Marshal(data)
   if err != nil {
