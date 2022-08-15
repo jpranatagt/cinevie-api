@@ -10,7 +10,30 @@ import (
 
 // POST method with /v1/movies endpoint
 func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Request) {
-  fmt.Fprintln(w, "create a new movie")
+	// an anonymous struct to be target of decode destination
+  var input struct {
+    Title     	string    `json:"title"`
+    Description	string    `json:"description"`
+    Cover     	string    `json:"cover"`
+    Trailer     string   	`json:"trailer"`
+    Year      	int32     `json:"year"`
+    Runtime   	int32     `json:"runtime"`
+    Genres    	[]string  `json:"genres"`
+    Cast    		[]string  `json:"cast"`
+  }
+
+  // initialize json.Decoder instance to read data from request body
+  // and use the Decode() method to decode the body contents into the input struct
+  // must pass non-nil pointer to Decode() and it'll return error at runtime
+  err := app.readJSON(w, r, &input)
+  if err != nil {
+    app.badRequestResponse(w, r, err)
+
+    return
+  }
+
+  // no need to close r.Body since it'll done by http.Server automatically
+  fmt.Fprintf(w, "%+v\n", input)
 }
 
 // GET method with /v1/movies/:id endpoint
