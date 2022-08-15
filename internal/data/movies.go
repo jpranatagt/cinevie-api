@@ -53,7 +53,7 @@ func ValidateMovie(v *validator.Validator, movie *Movie) {
 
 	v.Check(movie.Cast != nil, "cast", "must be provided")
 	v.Check(len(movie.Cast) >= 1, "cast", "must contain at least 1 genre")
-	v.Check(len(movie.Cast) <= 10, "cast", "must not contain more than 5 genres")
+	v.Check(len(movie.Cast) <= 10, "cast", "must not contain more than 10 cast")
 	// Note that we're using the Unique helper in the line below to check that all
 	// values in the movie.Genres slice are unique.
 	v.Check(validator.Unique(movie.Cast), "cast", "must not contain duplicate values")

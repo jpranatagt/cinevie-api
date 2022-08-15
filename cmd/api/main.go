@@ -48,7 +48,7 @@ func main() {
   flag.IntVar(&cfg.port, "port", 4000, "API server port.")
   flag.StringVar(&cfg.env, "env", "development", "Environment (development | staging | production).")
 	// read the db-dsn commandline into the config struct use third argument as default db-dsn
-  flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("CINEVI_DB_DSN"), "PostgreSQL DSN")
+  flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("CINEVIE_DB_DSN"), "PostgreSQL DSN")
 	// notice the default value
   flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections.")
   flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections.")
@@ -58,9 +58,6 @@ func main() {
 
 	 // logger prefixed with current date and time
   logger := log.New(os.Stdout, "", log.Ldate | log.Ltime)
-
-  // log a message that db connection pool has been successfully established
-  logger.Printf("database connection pool established")
 
 	// openDB() creating connection pool
   db, err := openDB(cfg)
