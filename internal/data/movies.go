@@ -146,11 +146,12 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 
 // update
 func (m MovieModel) Update(movie *Movie) error {
-	// increment version number by 1
+	// add 'AND version' clause as a base for updating the record in SQL query
+  // preventing data race
   query := `
     UPDATE movies
     SET title = $1, description = $2, cover = $3, trailer = $4, year = $5, runtime = $6, genres = $7, stars = $8, version = version + 1
-    WHERE id = $9
+		 WHERE id = $9 AND version = $10
     RETURNING version
   `
 
@@ -165,10 +166,21 @@ func (m MovieModel) Update(movie *Movie) error {
     pq.Array(movie.Genres),
     pq.Array(movie.Stars),
     movie.ID,
+		movie.Version, // add expected movie version
   }
 
-  // scanning movie version to be used as response
-  return m.DB.QueryRow(query, args...).Scan(&movie.Version)
+	// if no matching row found then the movie version has changed
+  err := m.DB.QueryRow(query, args...).Scan(&movie.Version)
+  if err != nil {
+    switch {
+    case errors.Is(err, sql.ErrNoRows):
+      return ErrEditConflict
+    default:
+      return err
+    }
+  }
+
+  return nil
 }
 
 // delete

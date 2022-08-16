@@ -9,6 +9,7 @@ import (
 // while looking up movie that doesn't exist
 var (
   ErrRecordNotFound = errors.New("record not found")
+	ErrEditConflict = errors.New("edit conflict")
 )
 
 // create models which wrap MovieModel
