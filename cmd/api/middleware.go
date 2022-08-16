@@ -5,6 +5,7 @@ import (
 	"net"
   "net/http"
 	"sync"
+	"time"
 
 	"golang.org/x/time/rate"
 )
@@ -35,11 +36,42 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 }
 
 func (app *application) rateLimit(next http.Handler) http.Handler {
+	// struct to hold the rate limiter and last seen time for each client
+	type client struct {
+		limiter *rate.Limiter
+		lastSeen time.Time
+	}
+
 	// a mutex and a map to hold the clients' IP addresses and rate limiters
 	var (
 		mu sync.Mutex
-		clients = make(map[string]*rate.Limiter)
+		// update the map so the values are pointers to a client struct
+		clients = make(map[string]*client)
 	)
+
+	// launch goroutine in the background which removes old entries from the clients
+	// once every minute
+	go func() {
+		for {
+			time.Sleep(time.Minute)
+
+			// lock the mutex to prevent any rate limiter checks from happening
+			// while the cleanup is taking place
+			mu.Lock()
+
+			// loop through the entire clients, if they haven't been seen within
+			// the last three minutes, delete the corresponding entry from the map
+			for ip, client := range clients {
+				if time.Since(client.lastSeen) > 3*time.Minute {
+					delete(clients, ip)
+				}
+			}
+
+			// unlock when the cleanup check is complete
+			mu.Unlock()
+		}
+	}()
+
 
 	// return closure which 'close over' the limiter variable
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -58,12 +90,16 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 		// if it doesn't, then initialize a new rate limiter
 		// and add the IP address along with limiter to the map
 		if _, found := clients[ip]; !found {
-			clients[ip] = rate.NewLimiter(2, 4)
+			// create and add a new client struct to the map if it doesn't exist yet
+			clients[ip] = &client{limiter: rate.NewLimiter(2, 4)}
 		}
+
+		// update the last seen time for the client
+		clients[ip].lastSeen = time.Now()
 
 		// call Allow() method on the rate limiter for the current IP address
 		// if the request isn't allowed, unlock the mutex and send a 429 Too Many Request
-		if !clients[ip].Allow() {
+		if !clients[ip].limiter.Allow() {
 			mu.Unlock()
 			app.rateLimitExceededResponse(w, r)
 
