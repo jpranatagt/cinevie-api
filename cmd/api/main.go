@@ -10,6 +10,8 @@ import (
   "os"
   "time"
 
+	"api.cinevie.jpranata.tech/internal/data"
+
 	// pq driver would register itself with database/sql
   // aliasing import to blank identifier(-) to stop compiler complaining
   // that the package not being used
@@ -33,10 +35,11 @@ type config struct  {
   }
 }
 
-// dependencies holder
+// application dependencies
 type application struct {
   config config
   logger *log.Logger
+	models data.Models
 }
 
 func main() {
@@ -68,11 +71,12 @@ func main() {
   // defer, so connection closed before main() exits
   defer db.Close()
 
-  // log a message that db connection pool has been successfully established
+	// initialize Models struct passing in the connection pool as parameter
   logger.Printf("database connection pool established")
   app := &application {
     config: cfg,
     logger: logger,
+		models: data.NewModels(db),
   }
 
   // servemux dispatch /v1/status route to statusHandler

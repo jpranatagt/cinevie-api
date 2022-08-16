@@ -1,6 +1,7 @@
 package data
 
 import (
+	"database/sql"
   "time"
 
 	"api.cinevie.jpranata.tech/internal/validator"
@@ -57,4 +58,30 @@ func ValidateMovie(v *validator.Validator, movie *Movie) {
 	// Note that we're using the Unique helper in the line below to check that all
 	// values in the movie.Genres slice are unique.
 	v.Check(validator.Unique(movie.Cast), "cast", "must not contain duplicate values")
+}
+
+type MovieModel struct {
+  DB *sql.DB
+}
+
+// creating placeholder method for CRUD process
+
+// insert
+func (m MovieModel) Insert(movie *Movie) error {
+  return nil
+}
+
+// fetch
+func (m MovieModel) Get(id int64) (*Movie, error) {
+  return nil, nil
+}
+
+// update
+func (m MovieModel) Update(movie *Movie) error {
+  return nil
+}
+
+// delete
+func (m MovieModel) Delete(id int64) error {
+  return nil
 }
