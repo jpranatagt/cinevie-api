@@ -2,9 +2,11 @@ package data
 
 import (
 	"database/sql"
+	"errors"
   "time"
 
 	"api.cinevie.jpranata.tech/internal/validator"
+	"github.com/lib/pq"
 )
 
 // anotate the Movie struct with struct tags
@@ -21,7 +23,7 @@ type Movie struct {
   Year        int32       `json:"year,omitempty"`
   Runtime     int32       `json:"runtime,omitempty"`
   Genres      []string    `json:"genres,omitempty"`
-  Cast        []string    `json:"cast,omitempty"`
+  Stars       []string    `json:"stars,omitempty"`
   Version     int32       `json:"version"`
 }
 
@@ -52,12 +54,12 @@ func ValidateMovie(v *validator.Validator, movie *Movie) {
 	// values in the movie.Genres slice are unique.
 	v.Check(validator.Unique(movie.Genres), "genres", "must not contain duplicate values")
 
-	v.Check(movie.Cast != nil, "cast", "must be provided")
-	v.Check(len(movie.Cast) >= 1, "cast", "must contain at least 1 genre")
-	v.Check(len(movie.Cast) <= 10, "cast", "must not contain more than 10 cast")
+	v.Check(movie.Stars != nil, "stars", "must be provided")
+	v.Check(len(movie.Stars) >= 1, "stars", "must contain at least 1 genre")
+	v.Check(len(movie.Stars) <= 10, "stars", "must not contain more than 10 stars")
 	// Note that we're using the Unique helper in the line below to check that all
 	// values in the movie.Genres slice are unique.
-	v.Check(validator.Unique(movie.Cast), "cast", "must not contain duplicate values")
+	v.Check(validator.Unique(movie.Stars), "stars", "must not contain duplicate values")
 }
 
 type MovieModel struct {
@@ -68,12 +70,78 @@ type MovieModel struct {
 
 // insert
 func (m MovieModel) Insert(movie *Movie) error {
-  return nil
+	// sql for inserting movie record and returning
+  // the system generated data to placeholder parameters
+  query := `
+    INSERT INTO movies (title, description, cover, trailer, year, runtime, genres, stars)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING id, created_at, version
+  `
+
+  // args slice containing the values for the placeholder parameters
+  // from movie struct and make it clear what values being used/where
+  args := []interface{}{
+		movie.Title,
+		movie.Description,
+		movie.Cover,
+		movie.Trailer,
+		movie.Year,
+		movie.Runtime,
+		pq.Array(movie.Genres),
+		pq.Array(movie.Stars),
+	}
+
+  // passing the args and scanning the system generated id, created_at, and version
+  // into movie struct, QueryRow() in use since returning a system-generated row
+  return m.DB.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
 // fetch
 func (m MovieModel) Get(id int64) (*Movie, error) {
-  return nil, nil
+	// movie ID using bigserial type and auto incrementing at 1 by default (2, 3, 4 and so on)
+  // there would be no movie ID less than 1 thus return error if that happen
+  if id < 1 {
+    return nil, ErrRecordNotFound // errors shortcut
+  }
+
+  // query for retrieving data
+  query := `
+    SELECT id, created_at, title, description, cover, trailer, year, runtime, genres, stars, version
+    FROM movies
+    WHERE id = $1
+  `
+
+  // a Movie struct to hold the data returned by the query
+  var movie Movie
+
+  // QueryRow() for returning single row (specific to a movie)
+  err := m.DB.QueryRow(query, id).Scan(
+    &movie.ID,
+    &movie.CreatedAt,
+    &movie.Title,
+		&movie.Description,
+		&movie.Cover,
+		&movie.Trailer,
+    &movie.Year,
+    &movie.Runtime,
+    pq.Array(&movie.Genres),
+		pq.Array(&movie.Stars),
+    &movie.Version,
+  )
+
+  // return a sql.ErrNoRows error if no matching movie found
+  // use custom ErrRecordNotFound instead
+  if err != nil {
+    switch {
+    case errors.Is(err, sql.ErrNoRows):
+      return nil, ErrRecordNotFound
+    default:
+      return nil, err
+    }
+  }
+
+  // otherwise return  a pointer to the Movie struct
+  return &movie, nil
 }
 
 // update

@@ -1,9 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
   "net/http"
-  "time"
 
 	"api.cinevie.jpranata.tech/internal/data"
 	"api.cinevie.jpranata.tech/internal/validator"
@@ -20,7 +20,7 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
     Year      	int32     `json:"year"`
     Runtime   	int32     `json:"runtime"`
     Genres    	[]string  `json:"genres"`
-    Cast    		[]string  `json:"cast"`
+    Stars    		[]string  `json:"stars"`
   }
 
   // initialize json.Decoder instance to read data from request body
@@ -33,7 +33,8 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
     return
   }
 
-	// copy the values from the input struct to a new Movie struct
+	// copy the values from the input (put in by readJSON through pointer) struct to a new Movie struct
+	// note that the movie variable contains a pointer to a Movie struct
 	movie := &data.Movie {
 		Title: 				input.Title,
 		Description:	input.Description,
@@ -42,7 +43,7 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		Year: 				input.Year,
 		Runtime: 			input.Runtime,
 		Genres: 			input.Genres,
-		Cast:					input.Cast,
+		Stars:				input.Stars,
 	}
 
 	// initialize a new validator
@@ -54,8 +55,25 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// passing in a movie pointer to the validated movie struct by ValidateMovie
+	err = app.models.Movies.Insert(movie)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+
+		return
+	}
+
+	// include Location header to let the client know which URL they can find
+	// newly created resource at. Make an empty http.Header map and use Set()
+	// method to add new Location header
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/v1/movies/%d", movie.ID))
+
   // no need to close r.Body since it'll done by http.Server automatically
-  fmt.Fprintf(w, "%+v\n", input)
+	err = app.writeJSON(w, http.StatusCreated, envelope{"movie": movie}, headers)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 // GET method with /v1/movies/:id endpoint
@@ -69,7 +87,7 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 
   // a new instance of the Movie struct
   // year field hasn't been specified yet
-  movie := data.Movie {
+  /* movie := data.Movie {
     ID:         	id,
     CreatedAt:  	time.Now(),
     Title:      	"The Shawshank Redemption",
@@ -79,9 +97,22 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 		Year:					1994,
     Runtime:    	142,
     Genres:     	[]string{"drama"},
-    Cast:     		[]string{"Tim Robbins", "Morgan Freeman", "Bob Gunton"},
+    Stars:     		[]string{"Tim Robbins", "Morgan Freeman", "Bob Gunton"},
     Version:    	1,
-  }
+  } */
+
+	// fetch specific movie data and return custom error if it happen
+	movie, err := app.models.Movies.Get(id)
+	if err != nil {
+		switch {
+			case errors.Is(err, data.ErrRecordNotFound):
+				app.notFoundResponse(w, r)
+			default:
+				app.serverErrorResponse(w, r, err)
+		}
+
+		return
+	}
 
   // encode struct into JSON
 	err = app.writeJSON(w, http.StatusOK, envelope{"movie": movie}, nil)
