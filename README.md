@@ -1,6 +1,6 @@
 A REST API for retrieving and managing information about movies written in Go.
 
-# ENDPOINTS
+#### ENDPOINTS
 
 Cinevie API would support following endpoints and actions:
 
@@ -14,7 +14,7 @@ Cinevie API would support following endpoints and actions:
 | GET    | /v1/movies     | listMovieHandler    | Show the details of listed movies          |
 | POST   | /v1/users      | registerUserHandler | Register a new user                        |
 
-# DIRECTORY STRUCTURE
+#### DIRECTORY STRUCTURE
 
 ```
 .
@@ -30,23 +30,23 @@ Cinevie API would support following endpoints and actions:
 └── remote
 ```
 
-bin/
+**bin/** \
 contain compiled application binaries for deployment
 
-cmd/api
+**cmd/api** \
 application-specific code like running the server, reading and writing HTTP request, and managing authentication
 
-internal/
+**internal/** \
 reusable code which imported by cmd/api (but not the other way around) for example database interaction, validation etc
 
-migrations/
+**migrations/** \
 SQL migrations files for database
 
-remote/
+**remote/** \
 configuration files and setup scripts for production server
 
-go.mod
+**go.mod** \
 declare project dependencies, versions, and module path
 
-Makefile
+**Makefile** \
 common script for automating administrative tasks like building binaries and executing database migrations
