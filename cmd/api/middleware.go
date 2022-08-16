@@ -2,7 +2,9 @@ package main
 
 import (
   "fmt"
+	"net"
   "net/http"
+	"sync"
 
 	"golang.org/x/time/rate"
 )
@@ -33,17 +35,43 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 }
 
 func (app *application) rateLimit(next http.Handler) http.Handler {
-	// allow average 2 requests per second
-	// with maximum of 4 request in a single "burst"
-	limiter := rate.NewLimiter(2, 4)
+	// a mutex and a map to hold the clients' IP addresses and rate limiters
+	var (
+		mu sync.Mutex
+		clients = make(map[string]*rate.Limiter)
+	)
 
 	// return closure which 'close over' the limiter variable
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !limiter.Allow() {
-			app.rateLimitExceedResponse(w, r)
+		// extract client IP address from request
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
 
 			return
 		}
+
+		// lock the mutex to prevent this code from being executed concurrently
+		mu.Lock()
+
+		// check if the IP address already exists in the map
+		// if it doesn't, then initialize a new rate limiter
+		// and add the IP address along with limiter to the map
+		if _, found := clients[ip]; !found {
+			clients[ip] = rate.NewLimiter(2, 4)
+		}
+
+		// call Allow() method on the rate limiter for the current IP address
+		// if the request isn't allowed, unlock the mutex and send a 429 Too Many Request
+		if !clients[ip].Allow() {
+			mu.Unlock()
+			app.rateLimitExceededResponse(w, r)
+
+			return
+		}
+
+		// unlock mutex before calling the next handler in the chain
+		mu.Unlock()
 
 		next.ServeHTTP(w, r)
 	})

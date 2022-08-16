@@ -60,7 +60,7 @@ func (app *application) editConflictResponse(w http.ResponseWriter, r *http.Requ
   app.errorResponse(w, r, http.StatusConflict, message)
 }
 
-func (app *application) rateLimitExceedResponse(w http.ResponseWriter, r *http.Request) {
+func (app *application) rateLimitExceededResponse(w http.ResponseWriter, r *http.Request) {
   message := "rate limit exceeded."
   app.errorResponse(w, r, http.StatusTooManyRequests, message)
 }
