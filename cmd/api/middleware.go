@@ -75,23 +75,22 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 
 	// return closure which 'close over' the limiter variable
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// extract client IP address from request
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
+		// only process rate limiter if it is enabled
+		if app.config.limiter.enabled {
+			// extract client IP address from request
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				app.serverErrorResponse(w, r, err)
 
-			return
-		}
+				return
+			}
 
 		// lock the mutex to prevent this code from being executed concurrently
 		mu.Lock()
 
-		// check if the IP address already exists in the map
-		// if it doesn't, then initialize a new rate limiter
-		// and add the IP address along with limiter to the map
 		if _, found := clients[ip]; !found {
-			// create and add a new client struct to the map if it doesn't exist yet
-			clients[ip] = &client{limiter: rate.NewLimiter(2, 4)}
+				// use the request per second and burst value from config struct
+				clients[ip] = &client{limiter: rate.NewLimiter(rate.Limit(app.config.limiter.rps), app.config.limiter.burst)}
 		}
 
 		// update the last seen time for the client
@@ -108,6 +107,7 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 
 		// unlock mutex before calling the next handler in the chain
 		mu.Unlock()
+	}
 
 		next.ServeHTTP(w, r)
 	})
