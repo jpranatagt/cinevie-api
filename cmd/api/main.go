@@ -97,7 +97,10 @@ func main() {
 
   err = app.serve()
 	// print FATAL level and exit
-  logger.PrintFatal(err, nil)
+	// fix panic: runtime error: invalid memory address or nil pointer dereference
+	if err != nil {
+  	logger.PrintFatal(err, nil)
+	}
 }
 
 // return a sql.DB connection pool
