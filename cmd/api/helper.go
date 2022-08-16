@@ -5,9 +5,12 @@ import (
   "errors"
 	"fmt"
 	"io"
+	"net/url"
   "net/http"
   "strconv"
 	"strings"
+
+	"api.cinevie.jpranata.tech/internal/validator"
 
   "github.com/julienschmidt/httprouter"
 )
@@ -119,4 +122,48 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst int
   }
 
   return nil
+}
+
+
+// return the default value if no matching key could be found
+func (app *application) readString(qs url.Values, key string, defaultValue string) string {
+  // extract key if no key exists return empty string ""
+  s := qs.Get(key)
+
+  if s == "" {
+    return defaultValue
+  }
+
+  return s
+}
+
+// split string into a slice on the comma character
+func (app *application) readCSV(qs url.Values, key string, defaultValue []string) []string {
+  csv := qs.Get(key)
+
+  if csv == "" {
+    return defaultValue
+  }
+
+  return strings.Split(csv, ",")
+}
+
+// reads and converts string value into integer
+// use validation to return appropriate error
+func (app *application) readInt(qs url.Values, key string, defaultValue int, v *validator.Validator) int {
+  s := qs.Get(key)
+
+  if s == "" {
+    return defaultValue
+  }
+
+  // conversion
+  i, err := strconv.Atoi(s)
+  if err != nil {
+    v.AddError(key, "must be an integer value")
+
+    return defaultValue
+  }
+
+  return i
 }

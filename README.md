@@ -11,6 +11,7 @@ Cinevie API would support following endpoints and actions:
 | GET    | /v1/movies/:id | showMovieHandler   | Show the details of a specific movie       |
 | PATCH  | /v1/movies/:id | updateMoviehandler | Update the details of a specific movie     |
 | DELETE | /v1/movies/:id | deleteMovieHandler | Delete a specific movie                    |
+| GET    | /v1/movies     | listMovieHandler   | Show the details of listed movies          |
 
 # DIRECTORY STRUCTURE
 

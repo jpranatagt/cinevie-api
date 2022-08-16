@@ -233,3 +233,63 @@ func (m MovieModel) Delete(id int64) error {
 
 	return nil
 }
+
+// fetch all movies
+func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
+  // query to retrieve all movies
+  query := `
+    SELECT id, created_at, title, year, runtime, genres, version
+    FROM movies
+    WHERE (LOWER(title) = LOWER($1) or $1 = '')
+    AND (genres @> $2 OR $2 = '{}')
+    ORDER BY id
+  `
+
+  // context timeout in 3 seconds
+  ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+  defer cancel()
+
+  // returns a sql.Rows() resultset
+  rows, err := m.DB.QueryContext(ctx, query, title, pq.Array(genres))
+  if err != nil {
+    return nil, err
+  }
+
+  // defer a call to rows.Close() to ensure the resultset
+  // is closed before GetAll() returns
+  defer rows.Close()
+
+  // initialize an empty slice to hold the movie data
+  movies := []*Movie{}
+
+  // use rows.Next to iterate through the rows in resultset
+  for rows.Next() {
+    // hold individual movie
+    var movie Movie
+
+    // scan the values from the row into the Movie struct
+    err := rows.Scan(
+      &movie.ID,
+      &movie.CreatedAt,
+      &movie.Title,
+      &movie.Year,
+      &movie.Runtime,
+      pq.Array(&movie.Genres),
+      &movie.Version,
+    )
+
+    if err != nil {
+      return nil, err
+    }
+
+    // add the Movie struct to the slice
+    movies = append(movies, &movie)
+  }
+
+  if err = rows.Err(); err != nil {
+    return nil, err
+  }
+
+  return movies, nil
+}
+
