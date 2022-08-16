@@ -170,10 +170,15 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 
 // accept an arbitrary function with signature func()
 func (app *application) background(fn func()) {
+	// increment the WaitGroup process number by one
+	app.wg.Add(1)
   // launch go routine
   go func() {
     // recover any panic by logging the message instead of terminating application
     defer func() {
+			// use defer to decrement the WaitGroup counter before the goroutine returns
+			defer app.wg.Done()
+
       if err := recover(); err != nil {
         app.logger.PrintError(fmt.Errorf("%s", err), nil)
       }

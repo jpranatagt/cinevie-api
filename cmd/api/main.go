@@ -5,6 +5,7 @@ import (
   "database/sql"
   "flag"
   "os"
+	"sync"
   "time"
 
 	"api.cinevie.jpranata.tech/internal/data"
@@ -56,6 +57,7 @@ type application struct {
   logger *jsonlog.Logger
 	models data.Models
 	mailer mailer.Mailer
+	wg		sync.WaitGroup
 }
 
 func main() {
