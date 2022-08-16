@@ -4,9 +4,6 @@ import (
   "context"
   "database/sql"
   "flag"
-  "fmt"
-  "log"
-  "net/http"
   "os"
   "time"
 
@@ -98,30 +95,7 @@ func main() {
 		models: data.NewModels(db),
   }
 
-  // servemux dispatch /v1/status route to statusHandler
-  mux := http.NewServeMux()
-  mux.HandleFunc("/v1/status", app.statusHandler)
-
-  // http server with sensible timeout
-  srv := &http.Server {
-    Addr:         fmt.Sprintf(":%d", cfg.port),
-    Handler:      app.routes(),
-		// Go log.logger instance with the log.New() function, passing
-    // in custom logger as the first parameter. The "" and 0 indicate
-    // that the log.Logger instance should not use a prefix or any flags
-    ErrorLog:     log.New(logger, "", 0),
-    IdleTimeout:  time.Minute,
-    ReadTimeout:  10 * time.Second,
-    WriteTimeout: 30 * time.Second,
-  }
-
-  // start the http server
-	// INFO level with properties
-  logger.PrintInfo("starting server", map[string]string{
-    "addr": srv.Addr,
-    "env": cfg.env,
-  })
-  err = srv.ListenAndServe()
+  err = app.serve()
 	// print FATAL level and exit
   logger.PrintFatal(err, nil)
 }
