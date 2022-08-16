@@ -167,3 +167,19 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 
   return i
 }
+
+// accept an arbitrary function with signature func()
+func (app *application) background(fn func()) {
+  // launch go routine
+  go func() {
+    // recover any panic by logging the message instead of terminating application
+    defer func() {
+      if err := recover(); err != nil {
+        app.logger.PrintError(fmt.Errorf("%s", err), nil)
+      }
+    }()
+
+    // execute the arbitrary function
+    fn()
+  }()
+}

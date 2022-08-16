@@ -63,12 +63,12 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
   }
 
 	// a goroutine sends the welcome email in the background to reduce latency
-	go func() {
+	app.background(func() {
 		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
 		if err != nil {
 			app.logger.PrintError(err, nil)
 		}
-	}()
+	})
 
   // change status code to Accepted 202 since it only being processed
   err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
