@@ -1,7 +1,9 @@
 package data
 
 import (
-  "api.cinevie.jpranata.tech/internal/validator"
+	"strings"
+
+ 	"api.cinevie.jpranata.tech/internal/validator"
 )
 
 type Filters struct {
@@ -20,3 +22,28 @@ func ValidateFilters(v *validator.Validator, f Filters) {
 
   v.Check(validator.In(f.Sort, f.SortSafelist...), "sort", "invalid sort value.")
 }
+
+// if client-provided sort field which matches one of the entries in
+// safelist, extract the column name from the sort field by stripping
+// the leading hyphen character (if one exists)
+// take the Filters struct directly from this file
+func (f Filters) sortColumn() string {
+  for _, safeValue := range f.SortSafelist {
+    if f.Sort == safeValue {
+      return strings.TrimPrefix(f.Sort, "-") // trimming the hyphen
+    }
+  }
+
+  panic("unsafe sort parameter: " + f.Sort)
+}
+
+// return the sort direction (ASC or DESC) depends on the prefix character
+// of Sort field
+func (f Filters) sortDirection() string {
+  if strings.HasPrefix(f.Sort, "-") {
+    return "DESC"
+  }
+
+  return "ASC"
+}
+
