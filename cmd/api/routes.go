@@ -27,8 +27,10 @@ func (app *application) routes() http.Handler {
   router.HandlerFunc(http.MethodGet, "/v1/movies/:id", app.showMovieHandler)
   router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.updateMovieHandler)
   router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.deleteMovieHandler)
-	// allow filter on list of movie
 	router.HandlerFunc(http.MethodGet, "/v1/movies", app.listMoviesHandler)
+
+	// route for POST /v1/users endpoint
+  router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
 
 	 // wrap the router with the panic recovery middleware
   // to ensure the middleware runs for every API endpoints
