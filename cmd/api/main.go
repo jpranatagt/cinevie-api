@@ -11,6 +11,7 @@ import (
   "time"
 
 	"api.cinevie.jpranata.tech/internal/data"
+	"api.cinevie.jpranata.tech/internal/jsonlog"
 
 	// pq driver would register itself with database/sql
   // aliasing import to blank identifier(-) to stop compiler complaining
@@ -38,7 +39,8 @@ type config struct  {
 // application dependencies
 type application struct {
   config config
-  logger *log.Logger
+	// change to jsonlog
+  logger *jsonlog.Logger
 	models data.Models
 }
 
@@ -59,20 +61,24 @@ func main() {
 
   flag.Parse()
 
-	 // logger prefixed with current date and time
-  logger := log.New(os.Stdout, "", log.Ldate | log.Ltime)
+	// initialize a new jsonlog.Logger which writes any messages
+  // *at or above* INFO severity level to standard out stream
+  logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
 	// openDB() creating connection pool
   db, err := openDB(cfg)
   if err != nil {
-    logger.Fatal(err)
+		// use PrintFatal() to write log at FATAL level and exit
+    // no additional entry so pass nil
+    logger.PrintFatal(err, nil)
   }
 
   // defer, so connection closed before main() exits
   defer db.Close()
 
 	// initialize Models struct passing in the connection pool as parameter
-  logger.Printf("database connection pool established")
+	// INFO level
+  logger.PrintInfo("database connection pool established", nil)
   app := &application {
     config: cfg,
     logger: logger,
@@ -87,15 +93,24 @@ func main() {
   srv := &http.Server {
     Addr:         fmt.Sprintf(":%d", cfg.port),
     Handler:      app.routes(),
+		// Go log.logger instance with the log.New() function, passing
+    // in custom logger as the first parameter. The "" and 0 indicate
+    // that the log.Logger instance should not use a prefix or any flags
+    ErrorLog:     log.New(logger, "", 0),
     IdleTimeout:  time.Minute,
     ReadTimeout:  10 * time.Second,
     WriteTimeout: 30 * time.Second,
   }
 
   // start the http server
-  logger.Printf("starting %s server on %s", cfg.env, srv.Addr)
+	// INFO level with properties
+  logger.PrintInfo("starting server", map[string]string{
+    "addr": srv.Addr,
+    "env": cfg.env,
+  })
   err = srv.ListenAndServe()
-  logger.Fatal(err)
+	// print FATAL level and exit
+  logger.PrintFatal(err, nil)
 }
 
 // return a sql.DB connection pool

@@ -15,7 +15,6 @@ func (app *application) statusHandler(w http.ResponseWriter, r *http.Request) {
 
   err := app.writeJSON(w, http.StatusOK, envelope{"status": data}, nil)
   if err != nil {
-    app.logger.Println(err)
-    http.Error(w, "The server encontered a problem and could not process your request.", http.StatusInternalServerError)
+    app.serverErrorResponse(w, r, err)
   }
 }
