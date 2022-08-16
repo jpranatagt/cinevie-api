@@ -32,5 +32,5 @@ func (app *application) routes() http.Handler {
 
 	 // wrap the router with the panic recovery middleware
   // to ensure the middleware runs for every API endpoints
-  return app.recoverPanic(router)
+	return app.recoverPanic(app.rateLimit(router))
 }
