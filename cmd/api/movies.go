@@ -121,3 +121,78 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
     http.Error(w, "The server encountered a problem and could not process your request.", http.StatusInternalServerError)
   }
 }
+
+func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Request) {
+	// extract the movie ID from URL
+	id, err := app.readIDParam(r)
+	if err != nil {
+		app.notFoundResponse(w, r)
+
+		return
+	}
+
+	// fetch the existing movie record using the id from request
+	movie, err := app.models.Movies.Get(id)
+	if err != nil {
+		switch {
+			case errors.Is(err, data.ErrRecordNotFound):
+				app.notFoundResponse(w, r)
+			default:
+				app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	// input struct to hold expected data from client
+	var input struct {
+		Title 			string 				`json:"title"`
+		Description string				`json:"description"`
+		Cover				string				`json:"cover"`
+		Trailer			string				`json:"trailer"`
+		Year				int32					`json:"year"`
+		Runtime			int32					`json:"runtime"`
+		Genres			[]string			`json:"genres"`
+		Stars				[]string			`json:"stars"`
+	}
+
+	// read the JSON request body data into the input struct
+	err = app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	// copy the values to appropriate fields of the movie record
+	movie.Title 			= input.Title
+	movie.Description = input.Description
+	movie.Cover				= input.Cover
+	movie.Trailer			= input.Trailer
+	movie.Year 				= input.Year
+	movie.Runtime 		= input.Runtime
+	movie.Genres 			= input.Genres
+	movie.Stars				= input.Stars
+
+	// validate the updated record
+	v := validator.New()
+
+	if data.ValidateMovie(v, movie); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+
+		return
+	}
+
+	// pass the updated movie record to our new Update() method
+	err = app.models.Movies.Update(movie)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+
+		return
+	}
+
+	// write the updated movie record in a JSON response
+	err = app.writeJSON(w, http.StatusOK, envelope{"movie": movie}, nil)
+
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}

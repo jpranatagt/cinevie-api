@@ -146,7 +146,29 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 
 // update
 func (m MovieModel) Update(movie *Movie) error {
-  return nil
+	// increment version number by 1
+  query := `
+    UPDATE movies
+    SET title = $1, description = $2, cover = $3, trailer = $4, year = $5, runtime = $6, genres = $7, stars = $8, version = version + 1
+    WHERE id = $9
+    RETURNING version
+  `
+
+  // args slice containing values for the placeholder parameters
+  args := []interface{} {
+    movie.Title,
+		movie.Description,
+		movie.Cover,
+		movie.Trailer,
+    movie.Year,
+    movie.Runtime,
+    pq.Array(movie.Genres),
+    pq.Array(movie.Stars),
+    movie.ID,
+  }
+
+  // scanning movie version to be used as response
+  return m.DB.QueryRow(query, args...).Scan(&movie.Version)
 }
 
 // delete

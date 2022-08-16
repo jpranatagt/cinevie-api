@@ -1,5 +1,7 @@
 A REST API for retrieving and managing information about movies written in Go.
 
+# ENDPOINTS
+
 Cinevie API would support following endpoints and actions:
 
 | Method | URL Pattern    | Handler            | Action                                     |
@@ -7,6 +9,7 @@ Cinevie API would support following endpoints and actions:
 | GET    | /v1/status     | statusHandler      | Show application condition and information |
 | POST   | /v1/movies     | createMovieHandler | Create a new movie                         |
 | GET    | /v1/movies/:id | showMovieHandler   | Show the details of a specific movie       |
+| PUT    | /v1/movies/:id | updateMoviehandler | Update the details of a specific movie     |
 
 # DIRECTORY STRUCTURE
 
