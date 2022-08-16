@@ -9,7 +9,7 @@ Cinevie API would support following endpoints and actions:
 | GET    | /v1/status     | statusHandler      | Show application condition and information |
 | POST   | /v1/movies     | createMovieHandler | Create a new movie                         |
 | GET    | /v1/movies/:id | showMovieHandler   | Show the details of a specific movie       |
-| PUT    | /v1/movies/:id | updateMoviehandler | Update the details of a specific movie     |
+| PATCH  | /v1/movies/:id | updateMoviehandler | Update the details of a specific movie     |
 | DELETE | /v1/movies/:id | deleteMovieHandler | Delete a specific movie                    |
 
 # DIRECTORY STRUCTURE

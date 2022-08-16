@@ -145,12 +145,12 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 
 	// input struct to hold expected data from client
 	var input struct {
-		Title 			string 				`json:"title"`
-		Description string				`json:"description"`
-		Cover				string				`json:"cover"`
-		Trailer			string				`json:"trailer"`
-		Year				int32					`json:"year"`
-		Runtime			int32					`json:"runtime"`
+		Title 			*string 				`json:"title"`
+		Description *string				`json:"description"`
+		Cover				*string				`json:"cover"`
+		Trailer			*string				`json:"trailer"`
+		Year				*int32					`json:"year"`
+		Runtime			*int32					`json:"runtime"`
 		Genres			[]string			`json:"genres"`
 		Stars				[]string			`json:"stars"`
 	}
@@ -171,6 +171,39 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 	movie.Runtime 		= input.Runtime
 	movie.Genres 			= input.Genres
 	movie.Stars				= input.Stars
+	// if the input.Field is nil then no corresponding value provided
+	// in JSON request body. Otherwise update the corresponding fields.
+	if input.Title != nil {
+		movie.Title = *input.Title
+	}
+
+	if input.Description != nil {
+		movie.Description = *input.Description
+	}
+
+	if input.Cover != nil {
+		movie.Cover = *input.Cover
+	}
+
+	if input.Trailer != nil {
+		movie.Trailer != *input.Trailer
+	}
+
+	if input.Year != nil {
+		movie.Year = *input.Year
+	}
+
+	if input.Runtime != nil {
+		movie.Runtime = *input.Runtime
+	}
+
+	if input.Genres != nil { // slice would return nil if it's empty
+		movie.Genres = input.Genres // don't need to dereference a slice
+	}
+
+	if input.Stars != nil {
+		movie.Stars = input.Stars
+	}
 
 	// validate the updated record
 	v := validator.New()
