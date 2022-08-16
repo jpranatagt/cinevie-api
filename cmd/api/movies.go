@@ -149,8 +149,8 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		Description *string				`json:"description"`
 		Cover				*string				`json:"cover"`
 		Trailer			*string				`json:"trailer"`
-		Year				*int32					`json:"year"`
-		Runtime			*int32					`json:"runtime"`
+		Year				*int32				`json:"year"`
+		Runtime			*int32				`json:"runtime"`
 		Genres			[]string			`json:"genres"`
 		Stars				[]string			`json:"stars"`
 	}
@@ -162,15 +162,6 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// copy the values to appropriate fields of the movie record
-	movie.Title 			= input.Title
-	movie.Description = input.Description
-	movie.Cover				= input.Cover
-	movie.Trailer			= input.Trailer
-	movie.Year 				= input.Year
-	movie.Runtime 		= input.Runtime
-	movie.Genres 			= input.Genres
-	movie.Stars				= input.Stars
 	// if the input.Field is nil then no corresponding value provided
 	// in JSON request body. Otherwise update the corresponding fields.
 	if input.Title != nil {
@@ -186,7 +177,7 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	if input.Trailer != nil {
-		movie.Trailer != *input.Trailer
+		movie.Trailer = *input.Trailer
 	}
 
 	if input.Year != nil {

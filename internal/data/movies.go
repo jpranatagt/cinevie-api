@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"database/sql"
 	"errors"
   "time"
@@ -91,9 +92,14 @@ func (m MovieModel) Insert(movie *Movie) error {
 		pq.Array(movie.Stars),
 	}
 
+	// context with 3 seconds timeout
+  ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+
+  defer cancel()
+
   // passing the args and scanning the system generated id, created_at, and version
   // into movie struct, QueryRow() in use since returning a system-generated row
-  return m.DB.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+  return m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
 // fetch
@@ -114,8 +120,15 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
   // a Movie struct to hold the data returned by the query
   var movie Movie
 
+	// use empty context.Background() as the parent context
+  ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+
+  // defer to make sure cancellation the context happen before the
+  // Get() method returns
+  defer cancel()
+
   // QueryRow() for returning single row (specific to a movie)
-  err := m.DB.QueryRow(query, id).Scan(
+  err := m.DB.QueryRowContext(ctx, query, id).Scan(
     &movie.ID,
     &movie.CreatedAt,
     &movie.Title,
@@ -195,8 +208,13 @@ func (m MovieModel) Delete(id int64) error {
     WHERE id = $1
   `
 
+	// context with 3 seconds timeout
+  ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+
+  defer cancel()
+
   // the Exec() method returns a sql.Result object
-  result, err := m.DB.Exec(query, id)
+  result, err := m.DB.ExecContext(ctx, query, id)
   if err != nil {
     return err
   }
