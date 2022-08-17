@@ -51,7 +51,7 @@ func (app *application) createActivationTokenHandler(w http.ResponseWriter, r *h
   }
 
   // otherwise create an new activation token
-  token, err := app.models.Tokens.New(user.ID, 24 * time.Hour, data.ScopeActivation)
+  token, err := app.models.Tokens.New(user.ID, 3 * time.Hour, data.ScopeActivation)
   if err != nil {
     app.serverErrorResponse(w, r, err)
 
