@@ -1,12 +1,16 @@
 {{ define "subject" }} Welcome to Cinevie! {{ end }}
 
 {{ define "plainBody" }}
-Hi,
+Hi, {{ .userName }}!
 
+Thanks for signing up for a Cinevie account. We're excited to have you on board!
+For future reference, your user ID number is {{.userID}}.
 
-Thanks for signing up on Cinevie. We're excited to have you on board!
+Please send a `PUT /v1/users/activated` request with the following JSON body to activate your account:
 
-For future reference, your user ID number is {{ .ID }}
+{"token": "{{ .activationToken}}"}
+
+Please note that this is a one-time use token and it will expire in 3 hours.
 
 
 Thanks,
@@ -23,10 +27,18 @@ The Cinevie Team
   </head>
 
   <body>
-    <p> Hi, {{ .Name }}</p>
+    <p> Hi, {{ .userName }}!</p>
     <br>
-    <p> Thanks for signing up on Cinevie. We're excited to have you on board! </p>
-    <p> For future reference, your user ID number is {{ .ID }} </p>
+
+	    <p>Thanks for signing up for a Cinevie account. We're excited to have you on board!</p>
+    <p>For future reference, your user ID number is {{.userID}}.</p>
+	<br>
+
+    <p> Please send a <code> PUT /v1/users/activated </code> request with the following JSON body to activate your account: </p>
+    <pre><code>
+      {"token": "{{ .activationToken }}"}
+    </code></pre>
+    <p> Please note that this is a one-time use token and it will expire in 3 hours. </p>
     <br>
     <p> Thanks, </p>
     <p> The Cinevie Team </p>
