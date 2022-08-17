@@ -99,8 +99,8 @@ production_username='u_cinevie'
 ## production/setup: setup timezone, locales, user, universe repository, firewall, failban2, golang, postgresql database and caddy
 .PHONY: production/setup
 production/setup:
-	rsync -rP --delete ./remote/setup root@${production_host_ip}
-	ssh -t ${production_username}@${production_host_ip} 'bash /root/setup/01.sh'
+	rsync -rP --delete ./remote/setup root@${production_host_ip}:~
+	ssh -t root@${production_host_ip} 'bash /root/setup/01.sh'
 
 ## producion/connect: connect to the production server
 .PHONY: production/connect
