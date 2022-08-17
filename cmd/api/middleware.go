@@ -179,3 +179,39 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+// check if a user is not anonymous
+func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+		user := app.contextGetUser(r)
+
+		if user.IsAnonymous() {
+			app.authenticationRequiredResponse(w, r)
+
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// accept and return http.HandlerFunc to be used as wrapper for /v1/movies** endpoint
+// check that a user is both authenticated and activated
+func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
+	fn := http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+		// retrieve user information from the request context
+		user := app.contextGetUser(r)
+
+		// if user is not activated
+		if !user.Activated {
+			app.inactiveAccountResponse(w, r)
+
+			return
+		}
+
+		// call the next handler in the chain
+		next.ServeHTTP(w, r)
+	})
+
+	return app.requireAuthenticatedUser(fn)
+}
