@@ -41,7 +41,7 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/v1/tokens/activation", app.createActivationTokenHandler)
 router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthenticationTokenHandler)
 
-	// use the authenticate middleware on all request
-  // after recoverPanic and rateLimit but before router
-  return app.recoverPanic(app.rateLimit(app.authenticate(router)))
+	// add the enableCORS() middleware
+  // put it before rateLimit to prevent request exceeded of 429 too many request response
+  return app.recoverPanic(app.enableCORS(app.rateLimit(app.authenticate(router))))
 }
