@@ -32,12 +32,19 @@ type User struct {
   Version       int         `json:"-"`
 }
 
+var AnonymousUser = &User{}
+
 // custom struct of password containing a plain text and a hashed version
 // pointers to distinguish between plain text being not present in struct
 // at all versus plain text containing empty string ""
 type password struct {
   plaintext *string
   hash      []byte
+}
+
+// check if a user instance is the AnonymousUser
+func (u *User) IsAnonymous() bool {
+	return u == AnonymousUser
 }
 
 // calculates the bcrypt hash of plain text password

@@ -41,5 +41,7 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/v1/tokens/activation", app.createActivationTokenHandler)
 router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthenticationTokenHandler)
 
-	return app.recoverPanic(app.rateLimit(router))
+	// use the authenticate middleware on all request
+  // after recoverPanic and rateLimit but before router
+  return app.recoverPanic(app.rateLimit(app.authenticate(router)))
 }
