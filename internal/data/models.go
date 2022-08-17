@@ -23,7 +23,7 @@ type Models struct {
 // return the initialized MovieModel
 func NewModels(db *sql.DB) Models {
   return Models{
-		Permission: PermissionModel{DB: db},
+		Permissions: PermissionModel{DB: db},
     Movies: MovieModel{DB: db},
 		Users: UserModel{DB: db},
 		Tokens: TokenModel{DB: db},

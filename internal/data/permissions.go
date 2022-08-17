@@ -34,7 +34,7 @@ func (m PermissionModel) GetAllForUser(userID int64) (Permissions, error) {
     SELECT permissions.code
     FROM permissions
     INNER JOIN users_permissions on users_permissions.permission_id = permissions.id
-    INNDER JOIN users ON users_permissions.user_id = users.id
+    INNER JOIN users ON users_permissions.user_id = users.id
     WHERE users.id = $1
   `
 
@@ -58,7 +58,7 @@ func (m PermissionModel) GetAllForUser(userID int64) (Permissions, error) {
       return nil, err
     }
 
-    permission = append(permissions, permission)
+    permissions = append(permissions, permission)
   }
 
   if err = rows.Err(); err != nil {
