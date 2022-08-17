@@ -3,6 +3,7 @@ package main
 import (
   "errors"
   "net/http"
+	"time"
 
   "api.cinevie.jpranata.tech/internal/data"
   "api.cinevie.jpranata.tech/internal/validator"
@@ -62,9 +63,25 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
     return
   }
 
+  // after the user record has been created in the database,
+  // generate new activation token for user
+  token, err := app.models.Tokens.New(user.ID, 3 * time.Hour, data.ScopeActivation)
+  if err != nil {
+	app.serverErrorResponse(w, r, err)
+
+	return
+  }
+
 	// a goroutine sends the welcome email in the background to reduce latency
 	app.background(func() {
-		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+		// use map to hold multiple pieces of data which would be passed to activation email
+		data := map[string]interface{} {
+			"activationToken": token.Plaintext,
+			"userID": user.ID,
+			"userName": user.Name,
+		}
+
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl", data)
 		if err != nil {
 			app.logger.PrintError(err, nil)
 		}
@@ -75,4 +92,70 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
   if err != nil {
     app.serverErrorResponse(w, r, err)
   }
+}
+
+func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
+	// parse the plain text activation token from the request body
+	var input struct {
+		TokenPlaintext string `json:"token"`
+	}
+
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+
+		return
+	}
+
+	// validate plain text token provided by client
+	v := validator.New()
+
+	if data.ValidateTokenPlaintext(v, input.TokenPlaintext); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+
+		return
+	}
+
+	// retrieve the user details associated with the token
+	user, err := app.models.Users.GetForToken(data.ScopeActivation, input.TokenPlaintext)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+				v.AddError("token", "invalid or expired activation token.")
+				app.failedValidationResponse(w, r, v.Errors)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+
+		return
+	}
+
+	// update the user's activation status
+	user.Activated = true
+
+	err = app.models.Users.Update(user)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrEditConflict):
+			app.editConflictResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+
+		return
+	}
+
+	// if everything run successfully, then delete all activation tokens for the user
+	err = app.models.Tokens.DeleteAllForUser(data.ScopeActivation, user.ID)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+
+		return
+	}
+
+	// send the updated user details to client in JSON response
+	err = app.writeJSON(w, http.StatusOK, envelope{"user": user}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
