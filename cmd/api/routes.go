@@ -1,6 +1,7 @@
 package main
 
 import (
+	"expvar" // debug metrics
   "net/http"
 
   "github.com/julienschmidt/httprouter"
@@ -26,6 +27,9 @@ func (app *application) routes() http.Handler {
 	// application condition and info
   router.HandlerFunc(http.MethodGet, "/v1/status", app.statusHandler)
 
+	// debug metrics
+  router.Handler(http.MethodGet, "/metrics", expvar.Handler())
+
 	// movies
 	router.HandlerFunc(http.MethodGet, "/v1/movies", app.requirePermission("movies:read", app.listMoviesHandler))
   router.HandlerFunc(http.MethodPost, "/v1/movies", app.requirePermission("movies:write", app.createMovieHandler))
@@ -43,5 +47,5 @@ router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthe
 
 	// add the enableCORS() middleware
   // put it before rateLimit to prevent request exceeded of 429 too many request response
-  return app.recoverPanic(app.enableCORS(app.rateLimit(app.authenticate(router))))
+	return app.metrics(app.recoverPanic(app.enableCORS(app.rateLimit(app.authenticate(router)))))
 }

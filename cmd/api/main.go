@@ -3,8 +3,10 @@ package main
 import (
   "context"
   "database/sql"
+	"expvar"
   "flag"
   "os"
+	"runtime"
 	"strings"
 	"sync"
   "time"
@@ -116,9 +118,28 @@ func main() {
   // defer, so connection closed before main() exits
   defer db.Close()
 
-	// initialize Models struct passing in the connection pool as parameter
 	// INFO level
   logger.PrintInfo("database connection pool established", nil)
+
+	// expvar debug metrics
+  expvar.NewString("version").Set(version)
+
+  // publish the number of active goroutines
+  expvar.Publish("goroutines", expvar.Func(func() interface{} {
+    return runtime.NumGoroutine()
+  }))
+
+  // the database connection pool statistics
+  expvar.Publish("database", expvar.Func(func() interface{} {
+    return db.Stats()
+  }))
+
+  // current Unix time-stamp
+  expvar.Publish("timestamp", expvar.Func(func() interface{} {
+    return time.Now().Unix()
+  }))
+
+	// initialize Models struct passing in the connection pool as parameter
   app := &application {
     config: cfg,
     logger: logger,
