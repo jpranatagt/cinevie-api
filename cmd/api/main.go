@@ -5,6 +5,7 @@ import (
   "database/sql"
 	"expvar"
   "flag"
+	"fmt"
   "os"
 	"runtime"
 	"strings"
@@ -21,7 +22,11 @@ import (
   _ "github.com/lib/pq"
 )
 
-const version = "1.0.0"
+// use var instead of const to accept git version
+var (
+  buildTime string
+  version   string
+)
 
 // add a db field to hold configuration settings
 // for now only holds DSN (Domain Source Name)
@@ -101,7 +106,18 @@ func main() {
     return nil
   })
 
-  flag.Parse()
+	// a new version boolean flag with the default value of false
+  displayVersion := flag.Bool("version", false, "Display version and exit.")
+
+	flag.Parse()
+
+  // if the version flag is true (flag exist without value), print out the version number & exit immediately
+  if *displayVersion {
+    fmt.Printf("Version:\t%s\n", version)
+    fmt.Printf("Build time: \t%s\n", buildTime)
+
+    os.Exit(0)
+  }
 
 	// initialize a new jsonlog.Logger which writes any messages
   // *at or above* INFO severity level to standard out stream
