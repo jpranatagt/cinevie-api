@@ -66,13 +66,13 @@ apt --yes install postgresql
 
 # set up the cinevie DB and create a user account with the password entered earlier
 # drop it particular element is exists
-sudo -i -u postgres psql -c "DROP DATABASE IF EXISTS '${DB_NAME}'"
-sudo -i -u postgres psql -c "CREATE DATABASE '${DB_NAME}'"
+sudo -i -u postgres psql -c "DROP DATABASE IF EXISTS ${DB_NAME}"
+sudo -i -u postgres psql -c "CREATE DATABASE ${DB_NAME}"
 
 sudo -i -u postgres psql -d "${DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS citext"
 
-sudo -i -u postgres psql -d "${DB_NAME}" -c "DROP ROLE IF EXISTS '${USERNAME}'"
-sudo -i -u postgres psql -d "${DB_NAME}" -c "CREATE ROLE '${USERNAME}' WITH LOGIN PASSWORD '${DB_PASSWORD}'"
+sudo -i -u postgres psql -d "${DB_NAME}" -c "DROP ROLE IF EXISTS ${USERNAME}"
+sudo -i -u postgres psql -d "${DB_NAME}" -c "CREATE ROLE ${USERNAME} WITH LOGIN PASSWORD '${DB_PASSWORD}'"
 
 # add a DSN for connecting to the cinevie database to the system-wide environment
 # variables in the /etc/environment file
