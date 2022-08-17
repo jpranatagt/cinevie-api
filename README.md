@@ -4,18 +4,18 @@ A REST API for retrieving and managing information about movies written in Go.
 
 Cinevie API would support following endpoints and actions:
 
-| Method | URL Pattern               | Handler                          | Action                                     |
-| ------ | ------------------------- | -------------------------------- | ------------------------------------------ |
-| GET    | /v1/status                | statusHandler                    | Show application condition and information |
-| POST   | /v1/movies                | createMovieHandler               | Create a new movie                         |
-| GET    | /v1/movies/:id            | showMovieHandler                 | Show the details of a specific movie       |
-| PATCH  | /v1/movies/:id            | updateMoviehandler               | Update the details of a specific movie     |
-| DELETE | /v1/movies/:id            | deleteMovieHandler               | Delete a specific movie                    |
-| GET    | /v1/movies                | listMovieHandler                 | Show the details of listed movies          |
-| POST   | /v1/users                 | registerUserHandler              | Register a new user                        |
-| PUT    | /v1/users/activated       | activateUserHandler              | Activate a specific user                   |
-| POST   | /v1/tokens/activation     | createActivationTokenHandler     | Generate a new activation token            |
-| POST   | /v1/tokens/authentication | createAuthenticationTokenHandler | Generate a new authentication token        |
+| Method | URL Pattern               | Required Permission | Handler                          | Action                                     |
+| ------ | ------------------------- | ------------------- | -------------------------------- | ------------------------------------------ |
+| GET    | /v1/status                | -                   | statusHandler                    | Show application condition and information |
+| POST   | /v1/movies                | movies:write        | createMovieHandler               | Create a new movie                         |
+| GET    | /v1/movies/:id            | movies:read         | showMovieHandler                 | Show the details of a specific movie       |
+| PATCH  | /v1/movies/:id            | movies:write        | updateMoviehandler               | Update the details of a specific movie     |
+| DELETE | /v1/movies/:id            | movies:write        | deleteMovieHandler               | Delete a specific movie                    |
+| GET    | /v1/movies                | movies:read         | listMovieHandler                 | Show the details of listed movies          |
+| POST   | /v1/users                 | -                   | registerUserHandler              | Register a new user                        |
+| PUT    | /v1/users/activated       | -                   | activateUserHandler              | Activate a specific user                   |
+| POST   | /v1/tokens/activation     | -                   | createActivationTokenHandler     | Generate a new activation token            |
+| POST   | /v1/tokens/authentication | -                   | createAuthenticationTokenHandler | Generate a new authentication token        |
 
 #### DIRECTORY STRUCTURE
 
