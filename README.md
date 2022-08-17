@@ -14,8 +14,11 @@ Cinevie API would support following endpoints and actions:
 | GET    | /v1/movies                | movies:read         | listMovieHandler                 | Show the details of listed movies          |
 | POST   | /v1/users                 | -                   | registerUserHandler              | Register a new user                        |
 | PUT    | /v1/users/activated       | -                   | activateUserHandler              | Activate a specific user                   |
+| PUT    | /v1/users/password        | -                   | updateUserPasswordHandler        | Update the password for a specific user    |
 | POST   | /v1/tokens/activation     | -                   | createActivationTokenHandler     | Generate a new activation token            |
 | POST   | /v1/tokens/authentication | -                   | createAuthenticationTokenHandler | Generate a new authentication token        |
+| POST   | /v1/tokens/password-reset | -                   | createPasswordResetTokenHandler  | Generate a new password reset token        |
+| GET    | /metrics                  | localhost:read      | metrics                          | Monitor metrics of the running application |
 
 #### DIRECTORY STRUCTURE
 
