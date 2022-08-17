@@ -1,224 +1,223 @@
 package main
 
 import (
-  "errors"
+	"errors"
 	"net/http"
-  "time"
+	"time"
 
-  "api.cinevie.jpranata.tech/internal/data"
-  "api.cinevie.jpranata.tech/internal/validator"
+	"api.cinevie.jpranata.tech/internal/data"
+	"api.cinevie.jpranata.tech/internal/validator"
 )
 
 func (app *application) createActivationTokenHandler(w http.ResponseWriter, r *http.Request) {
-  // parse and validate user's email address
-  var input struct {
-    Email string `json:"email"`
-  }
+	// parse and validate user's email address
+	var input struct {
+		Email string `json:"email"`
+	}
 
-  err := app.readJSON(w, r, &input)
-  if err != nil {
-    app.badRequestResponse(w, r, err)
-  }
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+	}
 
-  v := validator.New()
+	v := validator.New()
 
-  if data.ValidateEmail(v, input.Email); !v.Valid() {
-    app.failedValidationResponse(w, r, v.Errors)
+	if data.ValidateEmail(v, input.Email); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 
-    return
-  }
+		return
+	}
 
-  // retrieve corresponding record for the email address
-  user, err := app.models.Users.GetByEmail(input.Email)
-  if err != nil {
-    switch {
-    case errors.Is(err, data.ErrRecordNotFound):
-      v.AddError("email", "no matching email address found.")
-      app.failedValidationResponse(w, r, v.Errors)
-    default:
-      app.serverErrorResponse(w, r, err)
-    }
+	// retrieve corresponding record for the email address
+	user, err := app.models.Users.GetByEmail(input.Email)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			v.AddError("email", "no matching email address found.")
+			app.failedValidationResponse(w, r, v.Errors)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 
-    return
-  }
+		return
+	}
 
-  // return an error if the user has already been activated
-  if user.Activated {
-    v.AddError("email", "user has already been deactivated.")
-    app.failedValidationResponse(w, r, v.Errors)
+	// return an error if the user has already been activated
+	if user.Activated {
+		v.AddError("email", "user has already been deactivated.")
+		app.failedValidationResponse(w, r, v.Errors)
 
-    return
-  }
+		return
+	}
 
-  // otherwise create an new activation token
-  token, err := app.models.Tokens.New(user.ID, 3 * time.Hour, data.ScopeActivation)
-  if err != nil {
-    app.serverErrorResponse(w, r, err)
+	// otherwise create an new activation token
+	token, err := app.models.Tokens.New(user.ID, 3*time.Hour, data.ScopeActivation)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
 
-    return
-  }
+		return
+	}
 
-  // email user with their additional activation token
-  app.background(func() {
-    data := map[string]interface{} {
-      "activationToken": token.Plaintext,
-		"userName": user.Name,
-    }
+	// email user with their additional activation token
+	app.background(func() {
+		data := map[string]interface{}{
+			"activationToken": token.Plaintext,
+			"userName":        user.Name,
+		}
 
-    // send lowercase email which has been stored in the database
-    err = app.mailer.Send(user.Email, "token_activation.tmpl", data)
-    if err != nil {
-      app.logger.PrintError(err, nil)
-    }
-  })
+		// send lowercase email which has been stored in the database
+		err = app.mailer.Send(user.Email, "token_activation.tmpl", data)
+		if err != nil {
+			app.logger.PrintError(err, nil)
+		}
+	})
 
-  // send 202 Accepted response and configuration message to the client
-  env := envelope{"message": "an email will be sent to you containing activation instructions."}
+	// send 202 Accepted response and configuration message to the client
+	env := envelope{"message": "an email will be sent to you containing activation instructions."}
 
-  err = app.writeJSON(w, http.StatusAccepted, env, nil)
-  if err != nil {
-    app.serverErrorResponse(w, r, err)
-  }
+	err = app.writeJSON(w, http.StatusAccepted, env, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, r *http.Request) {
-  // parse the email and password from the request body
-  var input struct {
-    Email     string  `json:"email"`
-    Password  string  `json:"password"`
-  }
+	// parse the email and password from the request body
+	var input struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 
-  err := app.readJSON(w, r, &input) // parse and assign them to input struct
-  if err != nil {
-    app.badRequestResponse(w, r, err)
+	err := app.readJSON(w, r, &input) // parse and assign them to input struct
+	if err != nil {
+		app.badRequestResponse(w, r, err)
 
-    return
-  }
+		return
+	}
 
-  // validate the email and password
-  v := validator.New()
-  data.ValidateEmail(v, input.Email)
-  data.ValidatePasswordPlaintext(v, input.Password)
+	// validate the email and password
+	v := validator.New()
+	data.ValidateEmail(v, input.Email)
+	data.ValidatePasswordPlaintext(v, input.Password)
 
-  if !v.Valid() {
-    app.failedValidationResponse(w, r, v.Errors)
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 
-    return
-  }
+		return
+	}
 
-  // if not matching return invalidCrendentialsResponse with 401 code
-  user, err := app.models.Users.GetByEmail(input.Email)
-  if err != nil {
-    switch {
-      case errors.Is(err, data.ErrRecordNotFound):
-        app.invalidCredentialsResponse(w, r)
-      default:
-        app.serverErrorResponse(w, r, err)
-    }
+	// if not matching return invalidCrendentialsResponse with 401 code
+	user, err := app.models.Users.GetByEmail(input.Email)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.invalidCredentialsResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 
-  return
-  }
+		return
+	}
 
-  // check if password matches
-  match, err := user.Password.Matches(input.Password)
-  if err != nil {
-    app.serverErrorResponse(w, r, err)
+	// check if password matches
+	match, err := user.Password.Matches(input.Password)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
 
-    return
-  }
+		return
+	}
 
-  // if the password didn't match then call invalidCredentialsResponse again
-  if !match {
-    app.invalidCredentialsResponse(w, r)
+	// if the password didn't match then call invalidCredentialsResponse again
+	if !match {
+		app.invalidCredentialsResponse(w, r)
 
-    return
-  }
+		return
+	}
 
-  // generate a new token with the 24 hours expiry and the scope 'authentication'
-  token, err := app.models.Tokens.New(user.ID, 3 * time.Hour, data.ScopeAuthentication)
-  if err != nil {
-    app.serverErrorResponse(w, r, err)
-    return
-  }
+	// generate a new token with the 24 hours expiry and the scope 'authentication'
+	token, err := app.models.Tokens.New(user.ID, 3*time.Hour, data.ScopeAuthentication)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 
-  // encode the token to JSON and send it in the response along with a 201 status code
-  err = app.writeJSON(w, http.StatusCreated, envelope{"authentication_token": token}, nil)
-  if err != nil {
-    app.serverErrorResponse(w, r, err)
-  }
+	// encode the token to JSON and send it in the response along with a 201 status code
+	err = app.writeJSON(w, http.StatusCreated, envelope{"authentication_token": token}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
-
 
 // generate a password reset and send it to the user's email address
 func (app *application) createPasswordResetTokenHandler(w http.ResponseWriter, r *http.Request) {
-  // parse and validate the user's email address
-  var input struct {
-    Email string `json:"email"`
-  }
+	// parse and validate the user's email address
+	var input struct {
+		Email string `json:"email"`
+	}
 
-  err := app.readJSON(w, r, &input)
-  if err != nil {
-    app.badRequestResponse(w, r, err)
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
 
-    return
-  }
+		return
+	}
 
-  v := validator.New()
+	v := validator.New()
 
-  if data.ValidateEmail(v, input.Email); !v.Valid() {
-    app.failedValidationResponse(w, r, v.Errors)
+	if data.ValidateEmail(v, input.Email); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 
-    return
-  }
+		return
+	}
 
-  // retrieve the corresponding user record for the email address
-  user, err := app.models.Users.GetByEmail(input.Email)
-  if err != nil {
-    switch {
-    case errors.Is(err, data.ErrRecordNotFound):
-      v.AddError("email", "no matching email address found.")
-      app.failedValidationResponse(w, r, v.Errors)
-    default:
-      app.serverErrorResponse(w, r, err)
-    }
+	// retrieve the corresponding user record for the email address
+	user, err := app.models.Users.GetByEmail(input.Email)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			v.AddError("email", "no matching email address found.")
+			app.failedValidationResponse(w, r, v.Errors)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 
-    return
-  }
+		return
+	}
 
-  // return an error if the user is not activated
-  if !user.Activated {
-    v.AddError("email", "user account must be activated")
-    app.failedValidationResponse(w, r, v.Errors)
+	// return an error if the user is not activated
+	if !user.Activated {
+		v.AddError("email", "user account must be activated")
+		app.failedValidationResponse(w, r, v.Errors)
 
-    return
-  }
+		return
+	}
 
-  // otherwise, create a new password reset token with a 45-minute expiry time
-  token, err := app.models.Tokens.New(user.ID, 45 * time.Minute, data.ScopePasswordReset)
-  if err != nil {
-    app.serverErrorResponse(w, r, err)
+	// otherwise, create a new password reset token with a 45-minute expiry time
+	token, err := app.models.Tokens.New(user.ID, 45*time.Minute, data.ScopePasswordReset)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
 
-    return
-  }
+		return
+	}
 
-  // email the user with their password reset token
-  app.background(func() {
-    data := map[string]interface{} {
-      "passwordResetToken": token.Plaintext,
-		"userName": user.Name,
-    }
+	// email the user with their password reset token
+	app.background(func() {
+		data := map[string]interface{}{
+			"passwordResetToken": token.Plaintext,
+			"userName":           user.Name,
+		}
 
-    err = app.mailer.Send(user.Email, "token_password_reset.tmpl", data)
-    if err != nil {
-      app.logger.PrintError(err, nil)
-    }
-  })
+		err = app.mailer.Send(user.Email, "token_password_reset.tmpl", data)
+		if err != nil {
+			app.logger.PrintError(err, nil)
+		}
+	})
 
-  // send a 202 Accepted response and confirmation message to the client
-  env := envelope{"message": "an email would be sent to you containing password reset instructions."}
+	// send a 202 Accepted response and confirmation message to the client
+	env := envelope{"message": "an email would be sent to you containing password reset instructions."}
 
-  err = app.writeJSON(w, http.StatusAccepted, env, nil)
-  if err != nil {
-    app.serverErrorResponse(w, r, err)
-  }
+	err = app.writeJSON(w, http.StatusAccepted, env, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }

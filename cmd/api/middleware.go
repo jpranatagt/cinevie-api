@@ -3,8 +3,8 @@ package main
 import (
 	"errors"
 	"expvar"
-  "fmt"
-  "net/http"
+	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,18 +13,18 @@ import (
 	"api.cinevie.jpranata.tech/internal/data"
 	"api.cinevie.jpranata.tech/internal/validator"
 
-	"github.com/tomasen/realip"
 	"github.com/felixge/httpsnoop"
+	"github.com/tomasen/realip"
 	"golang.org/x/time/rate"
 )
 
 func (app *application) recoverPanic(next http.Handler) http.Handler {
-  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Create a deferred function (which will always be run in the event of a panic
 		// as Go unwinds the stack).
 		defer func() {
-		// Use the builtin recover function to check if there has been a panic or
-		// not.
+			// Use the builtin recover function to check if there has been a panic or
+			// not.
 			if err := recover(); err != nil {
 				// If there was a panic, set a "Connection: close" header on the
 				// response. This acts as a trigger to make Go's HTTP server
@@ -40,13 +40,13 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 			}
 		}()
 		next.ServeHTTP(w, r)
-  })
+	})
 }
 
 func (app *application) rateLimit(next http.Handler) http.Handler {
 	// struct to hold the rate limiter and last seen time for each client
 	type client struct {
-		limiter *rate.Limiter
+		limiter  *rate.Limiter
 		lastSeen time.Time
 	}
 
@@ -80,44 +80,43 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 		}
 	}()
 
-
 	// return closure which 'close over' the limiter variable
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// only process rate limiter if it is enabled
 		if app.config.limiter.enabled {
-		// use the realip.FromRequest() function to get the client's real IP address
+			// use the realip.FromRequest() function to get the client's real IP address
 			ip := realip.FromRequest(r)
 
-		// lock the mutex to prevent this code from being executed concurrently
-		mu.Lock()
+			// lock the mutex to prevent this code from being executed concurrently
+			mu.Lock()
 
-		if _, found := clients[ip]; !found {
+			if _, found := clients[ip]; !found {
 				// use the request per second and burst value from config struct
 				clients[ip] = &client{limiter: rate.NewLimiter(rate.Limit(app.config.limiter.rps), app.config.limiter.burst)}
-		}
+			}
 
-		// update the last seen time for the client
-		clients[ip].lastSeen = time.Now()
+			// update the last seen time for the client
+			clients[ip].lastSeen = time.Now()
 
-		// call Allow() method on the rate limiter for the current IP address
-		// if the request isn't allowed, unlock the mutex and send a 429 Too Many Request
-		if !clients[ip].limiter.Allow() {
+			// call Allow() method on the rate limiter for the current IP address
+			// if the request isn't allowed, unlock the mutex and send a 429 Too Many Request
+			if !clients[ip].limiter.Allow() {
+				mu.Unlock()
+				app.rateLimitExceededResponse(w, r)
+
+				return
+			}
+
+			// unlock mutex before calling the next handler in the chain
 			mu.Unlock()
-			app.rateLimitExceededResponse(w, r)
-
-			return
 		}
-
-		// unlock mutex before calling the next handler in the chain
-		mu.Unlock()
-	}
 
 		next.ServeHTTP(w, r)
 	})
 }
 
 func (app *application) authenticate(next http.Handler) http.Handler {
-	return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// indicates to any caches that the response may "vary" based on the value
 		// of the Authorization header in the request
 		w.Header().Add("Vary", "Authorization")
@@ -180,7 +179,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 
 // check if a user is not anonymous
 func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
 
 		if user.IsAnonymous() {
@@ -196,7 +195,7 @@ func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.Han
 // accept and return http.HandlerFunc to be used as wrapper for /v1/movies** endpoint
 // check that a user is both authenticated and activated
 func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
-	fn := http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// retrieve user information from the request context
 		user := app.contextGetUser(r)
 

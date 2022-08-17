@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-  "time"
+	"time"
 
 	"api.cinevie.jpranata.tech/internal/validator"
 	"github.com/lib/pq"
@@ -16,17 +16,17 @@ import (
 // use snake_case for the keys instead of CamelCase
 // add directive "-" to hide a field and "omitempty" if only if it's empty
 type Movie struct {
-  ID          int64       `json:"id"`
-  CreatedAt   time.Time   `json:"-"`
-  Title       string      `json:"title"`
-  Description string      `json:"description,omitempty"`
-  Cover       string      `json:"cover,omitempty"`
-  Trailer     string      `json:"trailer,omitempty"`
-  Year        int32       `json:"year,omitempty"`
-  Runtime     int32       `json:"runtime,omitempty"`
-  Genres      []string    `json:"genres,omitempty"`
-  Stars       []string    `json:"stars,omitempty"`
-  Version     int32       `json:"version"`
+	ID          int64     `json:"id"`
+	CreatedAt   time.Time `json:"-"`
+	Title       string    `json:"title"`
+	Description string    `json:"description,omitempty"`
+	Cover       string    `json:"cover,omitempty"`
+	Trailer     string    `json:"trailer,omitempty"`
+	Year        int32     `json:"year,omitempty"`
+	Runtime     int32     `json:"runtime,omitempty"`
+	Genres      []string  `json:"genres,omitempty"`
+	Stars       []string  `json:"stars,omitempty"`
+	Version     int32     `json:"version"`
 }
 
 func ValidateMovie(v *validator.Validator, movie *Movie) {
@@ -65,7 +65,7 @@ func ValidateMovie(v *validator.Validator, movie *Movie) {
 }
 
 type MovieModel struct {
-  DB *sql.DB
+	DB *sql.DB
 }
 
 // creating placeholder method for CRUD process
@@ -73,16 +73,16 @@ type MovieModel struct {
 // insert
 func (m MovieModel) Insert(movie *Movie) error {
 	// sql for inserting movie record and returning
-  // the system generated data to placeholder parameters
-  query := `
+	// the system generated data to placeholder parameters
+	query := `
     INSERT INTO movies (title, description, cover, trailer, year, runtime, genres, stars)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING id, created_at, version
   `
 
-  // args slice containing the values for the placeholder parameters
-  // from movie struct and make it clear what values being used/where
-  args := []interface{}{
+	// args slice containing the values for the placeholder parameters
+	// from movie struct and make it clear what values being used/where
+	args := []interface{}{
 		movie.Title,
 		movie.Description,
 		movie.Cover,
@@ -94,152 +94,152 @@ func (m MovieModel) Insert(movie *Movie) error {
 	}
 
 	// context with 3 seconds timeout
-  ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
-  defer cancel()
+	defer cancel()
 
-  // passing the args and scanning the system generated id, created_at, and version
-  // into movie struct, QueryRow() in use since returning a system-generated row
-  return m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+	// passing the args and scanning the system generated id, created_at, and version
+	// into movie struct, QueryRow() in use since returning a system-generated row
+	return m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
 // fetch
 func (m MovieModel) Get(id int64) (*Movie, error) {
 	// movie ID using bigserial type and auto incrementing at 1 by default (2, 3, 4 and so on)
-  // there would be no movie ID less than 1 thus return error if that happen
-  if id < 1 {
-    return nil, ErrRecordNotFound // errors shortcut
-  }
+	// there would be no movie ID less than 1 thus return error if that happen
+	if id < 1 {
+		return nil, ErrRecordNotFound // errors shortcut
+	}
 
-  // query for retrieving data
-  query := `
+	// query for retrieving data
+	query := `
     SELECT id, created_at, title, description, cover, trailer, year, runtime, genres, stars, version
     FROM movies
     WHERE id = $1
   `
 
-  // a Movie struct to hold the data returned by the query
-  var movie Movie
+	// a Movie struct to hold the data returned by the query
+	var movie Movie
 
 	// use empty context.Background() as the parent context
-  ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
-  // defer to make sure cancellation the context happen before the
-  // Get() method returns
-  defer cancel()
+	// defer to make sure cancellation the context happen before the
+	// Get() method returns
+	defer cancel()
 
-  // QueryRow() for returning single row (specific to a movie)
-  err := m.DB.QueryRowContext(ctx, query, id).Scan(
-    &movie.ID,
-    &movie.CreatedAt,
-    &movie.Title,
+	// QueryRow() for returning single row (specific to a movie)
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(
+		&movie.ID,
+		&movie.CreatedAt,
+		&movie.Title,
 		&movie.Description,
 		&movie.Cover,
 		&movie.Trailer,
-    &movie.Year,
-    &movie.Runtime,
-    pq.Array(&movie.Genres),
+		&movie.Year,
+		&movie.Runtime,
+		pq.Array(&movie.Genres),
 		pq.Array(&movie.Stars),
-    &movie.Version,
-  )
+		&movie.Version,
+	)
 
-  // return a sql.ErrNoRows error if no matching movie found
-  // use custom ErrRecordNotFound instead
-  if err != nil {
-    switch {
-    case errors.Is(err, sql.ErrNoRows):
-      return nil, ErrRecordNotFound
-    default:
-      return nil, err
-    }
-  }
+	// return a sql.ErrNoRows error if no matching movie found
+	// use custom ErrRecordNotFound instead
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
 
-  // otherwise return  a pointer to the Movie struct
-  return &movie, nil
+	// otherwise return  a pointer to the Movie struct
+	return &movie, nil
 }
 
 // update
 func (m MovieModel) Update(movie *Movie) error {
 	// add 'AND version' clause as a base for updating the record in SQL query
-  // preventing data race
-  query := `
+	// preventing data race
+	query := `
     UPDATE movies
     SET title = $1, description = $2, cover = $3, trailer = $4, year = $5, runtime = $6, genres = $7, stars = $8, version = version + 1
 		 WHERE id = $9 AND version = $10
     RETURNING version
   `
 
-  // args slice containing values for the placeholder parameters
-  args := []interface{} {
-    movie.Title,
+	// args slice containing values for the placeholder parameters
+	args := []interface{}{
+		movie.Title,
 		movie.Description,
 		movie.Cover,
 		movie.Trailer,
-    movie.Year,
-    movie.Runtime,
-    pq.Array(movie.Genres),
-    pq.Array(movie.Stars),
-    movie.ID,
+		movie.Year,
+		movie.Runtime,
+		pq.Array(movie.Genres),
+		pq.Array(movie.Stars),
+		movie.ID,
 		movie.Version, // add expected movie version
-  }
+	}
 
 	// if no matching row found then the movie version has changed
-  err := m.DB.QueryRow(query, args...).Scan(&movie.Version)
-  if err != nil {
-    switch {
-    case errors.Is(err, sql.ErrNoRows):
-      return ErrEditConflict
-    default:
-      return err
-    }
-  }
+	err := m.DB.QueryRow(query, args...).Scan(&movie.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
 
-  return nil
+	return nil
 }
 
 // delete
 func (m MovieModel) Delete(id int64) error {
 	if id < 1 {
-    return ErrRecordNotFound
-  }
+		return ErrRecordNotFound
+	}
 
-  // query to delete the record
-  query := `
+	// query to delete the record
+	query := `
     DELETE FROM movies
     WHERE id = $1
   `
 
 	// context with 3 seconds timeout
-  ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
-  defer cancel()
+	defer cancel()
 
-  // the Exec() method returns a sql.Result object
-  result, err := m.DB.ExecContext(ctx, query, id)
-  if err != nil {
-    return err
-  }
+	// the Exec() method returns a sql.Result object
+	result, err := m.DB.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
 
-  // get the number of rows that being affected
-  rowsAffected, err := result.RowsAffected()
-  if err != nil {
-    return err
-  }
+	// get the number of rows that being affected
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
 
-  // if no rows being effected, it means the movies table didn't contain
-  // a record with the provided ID
-  if rowsAffected == 0 {
-    return ErrRecordNotFound
-  }
+	// if no rows being effected, it means the movies table didn't contain
+	// a record with the provided ID
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
+	}
 
 	return nil
 }
 
 // fetch all movies
 func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error) {
-  // use count(*) OVER() to calculate total records according to filter which being applied
-  // query to retrieve all movies
-  query := fmt.Sprintf(`
+	// use count(*) OVER() to calculate total records according to filter which being applied
+	// query to retrieve all movies
+	query := fmt.Sprintf(`
 		SELECT count(*) OVER(), id, created_at, title, description, cover, trailer, year, runtime, genres, stars, version
     FROM movies
 		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) or $1 = '')
@@ -247,66 +247,65 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 		ORDER BY %s %s, id ASC
 		LIMIT $3 OFFSET $4
   `, filters.sortColumn(), filters.sortDirection())
-  // context timeout in 3 seconds
-  ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-  defer cancel()
+	// context timeout in 3 seconds
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
 	// put args as slice
-  args := []interface{}{
-    title,
-    pq.Array(genres),
-    filters.limit(),
-    filters.offset(),
-  }
+	args := []interface{}{
+		title,
+		pq.Array(genres),
+		filters.limit(),
+		filters.offset(),
+	}
 
-  // returns a sql.Rows() resultset
-  rows, err := m.DB.QueryContext(ctx, query, args...)
-  if err != nil {
-    return nil, Metadata{}, err
-  }
+	// returns a sql.Rows() resultset
+	rows, err := m.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, Metadata{}, err
+	}
 
-  // defer a call to rows.Close() to ensure the resultset
-  // is closed before GetAll() returns
-  defer rows.Close()
+	// defer a call to rows.Close() to ensure the resultset
+	// is closed before GetAll() returns
+	defer rows.Close()
 
 	// total records initialize with 0
-  totalRecords := 0
+	totalRecords := 0
 
-  // initialize an empty slice to hold the movie data
-  movies := []*Movie{}
+	// initialize an empty slice to hold the movie data
+	movies := []*Movie{}
 
-  // use rows.Next to iterate through the rows in resultset
-  for rows.Next() {
-    // hold individual movie
-    var movie Movie
+	// use rows.Next to iterate through the rows in resultset
+	for rows.Next() {
+		// hold individual movie
+		var movie Movie
 
-    // scan the values from the row into the Movie struct
-    err := rows.Scan(
+		// scan the values from the row into the Movie struct
+		err := rows.Scan(
 			&totalRecords,
-      &movie.ID,
-      &movie.CreatedAt,
-      &movie.Title,
-      &movie.Year,
-      &movie.Runtime,
-      pq.Array(&movie.Genres),
-      &movie.Version,
-    )
+			&movie.ID,
+			&movie.CreatedAt,
+			&movie.Title,
+			&movie.Year,
+			&movie.Runtime,
+			pq.Array(&movie.Genres),
+			&movie.Version,
+		)
 
-    if err != nil {
-      return nil, Metadata{}, err
-    }
+		if err != nil {
+			return nil, Metadata{}, err
+		}
 
-    // add the Movie struct to the slice
-    movies = append(movies, &movie)
-  }
+		// add the Movie struct to the slice
+		movies = append(movies, &movie)
+	}
 
-  if err = rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, Metadata{}, err
-  }
+	}
 
 	// generate a Metadata struct passing request value from client
-  metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
 
-  return movies, metadata, nil
+	return movies, metadata, nil
 }
-

@@ -1,96 +1,96 @@
 package main
 
 import (
-  "context"
-  "database/sql"
+	"context"
+	"database/sql"
 	"expvar"
-  "flag"
+	"flag"
 	"fmt"
-  "os"
+	"os"
 	"runtime"
 	"strings"
 	"sync"
-  "time"
+	"time"
 
 	"api.cinevie.jpranata.tech/internal/data"
 	"api.cinevie.jpranata.tech/internal/jsonlog"
 	"api.cinevie.jpranata.tech/internal/mailer"
 
 	// pq driver would register itself with database/sql
-  // aliasing import to blank identifier(-) to stop compiler complaining
-  // that the package not being used
-  _ "github.com/lib/pq"
+	// aliasing import to blank identifier(-) to stop compiler complaining
+	// that the package not being used
+	_ "github.com/lib/pq"
 )
 
 // use var instead of const to accept git version
 var (
-  buildTime string
-  version   string
+	buildTime string
+	version   string
 )
 
 // add a db field to hold configuration settings
 // for now only holds DSN (Domain Source Name)
 // from commandline flag
-type config struct  {
-  port int
-  env string
+type config struct {
+	port int
+	env  string
 
 	db struct {
-    dsn string
+		dsn          string
 		maxOpenConns int
-    maxIdleConns int
-    maxIdleTime string
-  }
+		maxIdleConns int
+		maxIdleTime  string
+	}
 
 	// a new limiter struct containing fields for request-per-second, burst values,
-  // and a boolean field to indicate that rate limiter is enabled or disabled
-  limiter struct {
-    rps float64
-    burst int
-    enabled bool
-  }
+	// and a boolean field to indicate that rate limiter is enabled or disabled
+	limiter struct {
+		rps     float64
+		burst   int
+		enabled bool
+	}
 
 	smtp struct {
-    host string
-    port int
-    username string
-    password string
-    sender string
-  }
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
 
 	cors struct {
-    trustedOrigins []string
-  }
+		trustedOrigins []string
+	}
 }
 
 // application dependencies
 type application struct {
-  config config
-  logger *jsonlog.Logger
+	config config
+	logger *jsonlog.Logger
 	models data.Models
 	mailer mailer.Mailer
-	wg		sync.WaitGroup
+	wg     sync.WaitGroup
 }
 
 func main() {
-  // instance of config
-  var cfg config
+	// instance of config
+	var cfg config
 
-  // read the value for port and env from command-line flags into the config struct
-  // default to port 4000 and development env
-  flag.IntVar(&cfg.port, "port", 4000, "API server port.")
-  flag.StringVar(&cfg.env, "env", "development", "Environment (development | staging | production).")
+	// read the value for port and env from command-line flags into the config struct
+	// default to port 4000 and development env
+	flag.IntVar(&cfg.port, "port", 4000, "API server port.")
+	flag.StringVar(&cfg.env, "env", "development", "Environment (development | staging | production).")
 	// read the db-dsn commandline into the config struct use third argument as default db-dsn
-  flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("CINEVIE_DB_DSN"), "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("CINEVIE_DB_DSN"), "PostgreSQL DSN")
 	// notice the default value
-  flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections.")
-  flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections.")
-  flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time.")
+	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections.")
+	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections.")
+	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time.")
 
 	// read rate limiter setting from command line
-  flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum request per second.")
-  flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst.")
-  flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter.")
+	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum request per second.")
+	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst.")
+	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter.")
 
 	// smtp server
 	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP host")
@@ -100,84 +100,84 @@ func main() {
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.jpranata.tech>", "SMTP sender")
 
 	// cors
-  flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated).", func(val string) error {
-    cfg.cors.trustedOrigins = strings.Fields(val)
+	flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated).", func(val string) error {
+		cfg.cors.trustedOrigins = strings.Fields(val)
 
-    return nil
-  })
+		return nil
+	})
 
 	// a new version boolean flag with the default value of false
-  displayVersion := flag.Bool("version", false, "Display version and exit.")
+	displayVersion := flag.Bool("version", false, "Display version and exit.")
 
 	flag.Parse()
 
-  // if the version flag is true (flag exist without value), print out the version number & exit immediately
-  if *displayVersion {
-    fmt.Printf("Version:\t%s\n", version)
-    fmt.Printf("Build time: \t%s\n", buildTime)
+	// if the version flag is true (flag exist without value), print out the version number & exit immediately
+	if *displayVersion {
+		fmt.Printf("Version:\t%s\n", version)
+		fmt.Printf("Build time: \t%s\n", buildTime)
 
-    os.Exit(0)
-  }
+		os.Exit(0)
+	}
 
 	// initialize a new jsonlog.Logger which writes any messages
-  // *at or above* INFO severity level to standard out stream
-  logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
+	// *at or above* INFO severity level to standard out stream
+	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
 	// openDB() creating connection pool
-  db, err := openDB(cfg)
-  if err != nil {
+	db, err := openDB(cfg)
+	if err != nil {
 		// use PrintFatal() to write log at FATAL level and exit
-    // no additional entry so pass nil
-    logger.PrintFatal(err, nil)
-  }
+		// no additional entry so pass nil
+		logger.PrintFatal(err, nil)
+	}
 
-  // defer, so connection closed before main() exits
-  defer db.Close()
+	// defer, so connection closed before main() exits
+	defer db.Close()
 
 	// INFO level
-  logger.PrintInfo("database connection pool established", nil)
+	logger.PrintInfo("database connection pool established", nil)
 
 	// expvar debug metrics
-  expvar.NewString("version").Set(version)
+	expvar.NewString("version").Set(version)
 
-  // publish the number of active goroutines
-  expvar.Publish("goroutines", expvar.Func(func() interface{} {
-    return runtime.NumGoroutine()
-  }))
+	// publish the number of active goroutines
+	expvar.Publish("goroutines", expvar.Func(func() interface{} {
+		return runtime.NumGoroutine()
+	}))
 
-  // the database connection pool statistics
-  expvar.Publish("database", expvar.Func(func() interface{} {
-    return db.Stats()
-  }))
+	// the database connection pool statistics
+	expvar.Publish("database", expvar.Func(func() interface{} {
+		return db.Stats()
+	}))
 
-  // current Unix time-stamp
-  expvar.Publish("timestamp", expvar.Func(func() interface{} {
-    return time.Now().Unix()
-  }))
+	// current Unix time-stamp
+	expvar.Publish("timestamp", expvar.Func(func() interface{} {
+		return time.Now().Unix()
+	}))
 
 	// initialize Models struct passing in the connection pool as parameter
-  app := &application {
-    config: cfg,
-    logger: logger,
+	app := &application{
+		config: cfg,
+		logger: logger,
 		models: data.NewModels(db),
 		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
-  }
+	}
 
-  err = app.serve()
+	err = app.serve()
 	// print FATAL level and exit
 	// fix panic: runtime error: invalid memory address or nil pointer dereference
 	if err != nil {
-  	logger.PrintFatal(err, nil)
+		logger.PrintFatal(err, nil)
 	}
 }
 
 // return a sql.DB connection pool
 func openDB(cfg config) (*sql.DB, error) {
-  // create an empty connection
-  db, err := sql.Open("postgres", cfg.db.dsn)
-  if err != nil {
-    return nil, err
-  }
+	// create an empty connection
+	db, err := sql.Open("postgres", cfg.db.dsn)
+	if err != nil {
+		return nil, err
+	}
 
 	// Set the maximum number of open (in-use + idle) connections in the pool. Note that
 	// passing a value less than or equal to 0 will mean there is no limit.
@@ -197,17 +197,17 @@ func openDB(cfg config) (*sql.DB, error) {
 	// Set the maximum idle timeout.
 	db.SetConnMaxIdleTime(duration)
 
-  // context with 5 seconds timeout deadline
-  ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-  defer cancel()
+	// context with 5 seconds timeout deadline
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-  // use PingContext() to establish new connection to the database
-  // if connection couldn't be established within 5 seconds deadline return error
-  err = db.PingContext(ctx)
-  if err != nil {
-    return nil, err
-  }
+	// use PingContext() to establish new connection to the database
+	// if connection couldn't be established within 5 seconds deadline return error
+	err = db.PingContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-  // return the sql.DB connection pool and nil for the error
-  return db, nil
+	// return the sql.DB connection pool and nil for the error
+	return db, nil
 }

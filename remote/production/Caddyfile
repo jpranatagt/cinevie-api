@@ -1,0 +1,8 @@
+{
+  email jepri@jpranata.tech
+}
+
+api.cinevie.jpranata.tech {
+  respond /metrics "Not Permitted" 403
+  reverse_proxy localhost:4000
+}

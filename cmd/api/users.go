@@ -1,67 +1,67 @@
 package main
 
 import (
-  "errors"
-  "net/http"
+	"errors"
+	"net/http"
 	"time"
 
-  "api.cinevie.jpranata.tech/internal/data"
-  "api.cinevie.jpranata.tech/internal/validator"
+	"api.cinevie.jpranata.tech/internal/data"
+	"api.cinevie.jpranata.tech/internal/validator"
 )
 
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
-  // an anonymous struct to hold the expected data from the request body
-  var input struct {
-    Name      string    `json:"name"`
-    Email     string    `json:"email"`
-    Password  string    `json:"password"`
-  }
+	// an anonymous struct to hold the expected data from the request body
+	var input struct {
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 
-  // parse the request body to the anonymous struct
-  err := app.readJSON(w, r, &input)
-  if err != nil {
-    app.badRequestResponse(w, r, err)
+	// parse the request body to the anonymous struct
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
 
-    return
-  }
+		return
+	}
 
-  // copy the data from the request body into a new User struct
-  user := &data.User {
-    Name: input.Name,
-    Email: input.Email,
-    Activated: false,
-  }
+	// copy the data from the request body into a new User struct
+	user := &data.User{
+		Name:      input.Name,
+		Email:     input.Email,
+		Activated: false,
+	}
 
-  // Password.Set() to generate and store the hashed and plain text passwords
-  err = user.Password.Set(input.Password)
-  if err != nil {
-    app.serverErrorResponse(w, r, err)
+	// Password.Set() to generate and store the hashed and plain text passwords
+	err = user.Password.Set(input.Password)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
 
-    return
-  }
+		return
+	}
 
-  v := validator.New()
+	v := validator.New()
 
-  // validate the user struct and return the error messages
-  if data.ValidateUser(v, user); !v.Valid() {
-    app.failedValidationResponse(w, r, v.Errors)
+	// validate the user struct and return the error messages
+	if data.ValidateUser(v, user); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 
-    return
-  }
+		return
+	}
 
-  // inert the user data into database
-  err = app.models.Users.Insert(user)
-  if err != nil {
-    switch {
-    case errors.Is(err, data.ErrDuplicateEmail):
-      v.AddError("email", "a user with this email address already exists.")
-      app.failedValidationResponse(w, r, v.Errors)
-    default:
-      app.serverErrorResponse(w, r, err)
-    }
+	// inert the user data into database
+	err = app.models.Users.Insert(user)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrDuplicateEmail):
+			v.AddError("email", "a user with this email address already exists.")
+			app.failedValidationResponse(w, r, v.Errors)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 
-    return
-  }
+		return
+	}
 
 	// add the "movies:read" permission for the new registered user
 	err = app.models.Permissions.AddForUser(user.ID, "movies:read")
@@ -71,22 +71,22 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-  // after the user record has been created in the database,
-  // generate new activation token for user
-  token, err := app.models.Tokens.New(user.ID, 3 * time.Hour, data.ScopeActivation)
-  if err != nil {
-	app.serverErrorResponse(w, r, err)
+	// after the user record has been created in the database,
+	// generate new activation token for user
+	token, err := app.models.Tokens.New(user.ID, 3*time.Hour, data.ScopeActivation)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
 
-	return
-  }
+		return
+	}
 
 	// a goroutine sends the welcome email in the background to reduce latency
 	app.background(func() {
 		// use map to hold multiple pieces of data which would be passed to activation email
-		data := map[string]interface{} {
+		data := map[string]interface{}{
 			"activationToken": token.Plaintext,
-			"userID": user.ID,
-			"userName": user.Name,
+			"userID":          user.ID,
+			"userName":        user.Name,
 		}
 
 		err = app.mailer.Send(user.Email, "user_welcome.tmpl", data)
@@ -95,11 +95,11 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		}
 	})
 
-  // change status code to Accepted 202 since it only being processed
-  err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
-  if err != nil {
-    app.serverErrorResponse(w, r, err)
-  }
+	// change status code to Accepted 202 since it only being processed
+	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -129,8 +129,8 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-				v.AddError("token", "invalid or expired activation token.")
-				app.failedValidationResponse(w, r, v.Errors)
+			v.AddError("token", "invalid or expired activation token.")
+			app.failedValidationResponse(w, r, v.Errors)
 		default:
 			app.serverErrorResponse(w, r, err)
 		}
@@ -172,8 +172,8 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 func (app *application) updateUserPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	// parse and validate the user's new password and password reset token
 	var input struct {
-		Password string `json:"password"`
-		TokenPlaintext	string `json:"token"`
+		Password       string `json:"password"`
+		TokenPlaintext string `json:"token"`
 	}
 
 	err := app.readJSON(w, r, &input)
@@ -244,4 +244,3 @@ func (app *application) updateUserPasswordHandler(w http.ResponseWriter, r *http
 		app.serverErrorResponse(w, r, err)
 	}
 }
-
