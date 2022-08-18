@@ -101,6 +101,7 @@ production_username='u_cinevie'
 production/setup:
 	rsync -rP --delete ./remote/setup root@${production_host_ip}:~
 	ssh -t root@${production_host_ip} 'bash /root/setup/01.sh'
+	sleep 10
 
 ## producion/connect: connect to the production server
 .PHONY: production/connect
@@ -109,7 +110,7 @@ production/connect:
 
 ## production/deploy/api: deploy api to production server
 .PHONY: production/deploy/api
-production/deploy/api:
+production/deploy/api: production/connect
 	rsync -rP --delete ./bin/linux_amd64/api ./migrations ${production_username}@${production_host_ip}:~
 	ssh -t ${production_username}@${production_host_ip} 'migrate -path ~/migrations -database $$CINEVIE_DB_DSN up'
 
