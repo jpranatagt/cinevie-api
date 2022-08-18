@@ -80,10 +80,11 @@ echo "CINEVIE_DB_DSN='postgres://${USERNAME}:${DB_PASSWORD}@localhost/${DB_NAME}
 
 # install Caddy
 sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
 sudo apt update
-sudo apt install caddy
+sudo apt install caddy -y
+sudo apt autoremove -y
 
 echo "Script complete! Rebooting..."
-reboot
+nohup reboot &>/dev/null & exit
