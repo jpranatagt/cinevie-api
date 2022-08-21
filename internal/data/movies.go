@@ -286,9 +286,13 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 			&movie.ID,
 			&movie.CreatedAt,
 			&movie.Title,
+			&movie.Description,
+			&movie.Cover,
+			&movie.Trailer,
 			&movie.Year,
 			&movie.Runtime,
 			pq.Array(&movie.Genres),
+			pq.Array(&movie.Stars),
 			&movie.Version,
 		)
 

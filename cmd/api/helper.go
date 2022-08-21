@@ -39,7 +39,7 @@ func (app *application) writeJSON(w http.ResponseWriter, status int, data envelo
 		return err
 	}
 
-	// append new line for terminal view
+	// append a new line in the end of JSON for terminal view
 	js = append(js, '\n')
 
 	// loop header map and add each header to http.ResponseWriter header

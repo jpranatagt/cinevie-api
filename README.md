@@ -26,7 +26,7 @@ Cinevie API would support the following endpoints and actions:
 .
 ├── bin
 ├── cmd
-|		└── api
+|  └── api
 ├── go.mod
 ├── go.sum
 ├── internal
