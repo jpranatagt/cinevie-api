@@ -1,6 +1,7 @@
 package main
 
 import (
+//  	"fmt"
 	"errors"
 	"net/http"
 	"time"
@@ -44,7 +45,7 @@ func (app *application) createActivationTokenHandler(w http.ResponseWriter, r *h
 
 	// return an error if the user has already been activated
 	if user.Activated {
-		v.AddError("email", "user has already been deactivated.")
+		v.AddError("email", "user has already been activated.")
 		app.failedValidationResponse(w, r, v.Errors)
 
 		return
@@ -106,7 +107,7 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		return
 	}
 
-	// if not matching return invalidCrendentialsResponse with 401 code
+	// if doesn't match return invalidCrendentialsResponse with 401 code
 	user, err := app.models.Users.GetByEmail(input.Email)
 	if err != nil {
 		switch {
@@ -134,14 +135,25 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		return
 	}
 
+    // delete the previous token if it exists
+	err = app.models.Tokens.DeleteAllForUser(data.ScopeAuthentication, user.ID)
+
 	// generate a new token with the 24 hours expiry and the scope 'authentication'
-	token, err := app.models.Tokens.New(user.ID, 3*time.Hour, data.ScopeAuthentication)
+	token, err := app.models.Tokens.New(user.ID, 24*time.Hour, data.ScopeAuthentication)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
 
 	// encode the token to JSON and send it in the response along with a 201 status code
+	/* http.SetCookie(w, &http.Cookie{
+	  Name: "session_token",
+	  Value: token.Plaintext,
+	  Expires: token.Expiry,
+	})
+	fmt.Printf("token type is %s\n", token.Plaintext)
+	*/
+
 	err = app.writeJSON(w, http.StatusCreated, envelope{"authentication_token": token}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -191,6 +203,9 @@ func (app *application) createPasswordResetTokenHandler(w http.ResponseWriter, r
 
 		return
 	}
+
+    // delete the previous token if it exists
+	err = app.models.Tokens.DeleteAllForUser(data.ScopePasswordReset, user.ID)
 
 	// otherwise, create a new password reset token with a 45-minute expiry time
 	token, err := app.models.Tokens.New(user.ID, 45*time.Minute, data.ScopePasswordReset)
