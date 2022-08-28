@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -117,39 +116,17 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 
 func (app *application) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// indicates to any caches that the response may "vary" based on the value
-		// of the Authorization header in the request
-		w.Header().Add("Vary", "Authorization")
-
-		// retrieve the value of the Authorization header from request
-		// return the empty string "" if there is no such header found
-		authorizationHeader := r.Header.Get("Authorization")
-
-		// if there is no Authorization header found, use the contextSetUser() helper
-		// to add the AnonymousUser to the request context, then call the next handler
-		if authorizationHeader == "" {
+	  	token, err := r.Cookie("session_token")
+		if err != nil {
 			r = app.contextSetUser(r, data.AnonymousUser)
 			next.ServeHTTP(w, r)
 
 			return
 		}
 
-		// otherwise, expect the Authorization header to be in the format
-		// "Bearer <token>", split this into its constituent parts
-		// and if the header isn't in the expected format return 401 Unauthorized
-		headerParts := strings.Split(authorizationHeader, " ")
-		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
-			app.invalidAuthenticationTokenResponse(w, r)
-
-			return
-		}
-
-		// extract the actual authentication token from the header parts
-		token := headerParts[1]
-
 		// validate the token to make sure it is in sensible format
 		v := validator.New()
-		if data.ValidateTokenPlaintext(v, token); !v.Valid() {
+		if data.ValidateTokenPlaintext(v, token.Value); !v.Valid() {
 			app.invalidAuthenticationTokenResponse(w, r)
 
 			return
@@ -157,7 +134,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 
 		// retrieve the details of the user associated with the authentication token
 		// notice that ScopeAuthentication as the first parameter are being used
-		user, err := app.models.Users.GetForToken(data.ScopeAuthentication, token)
+		user, err := app.models.Users.GetForToken(data.ScopeAuthentication, token.Value)
 		if err != nil {
 			switch {
 			case errors.Is(err, data.ErrRecordNotFound):
@@ -259,13 +236,14 @@ func (app *application) enableCORS(next http.Handler) http.Handler {
 			// loop and check if the request origin matches trusted list
 			for i := range app.config.cors.trustedOrigins {
 				if origin == app.config.cors.trustedOrigins[i] {
-					w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 					// if the request has the HTTP method OPTIONS and contains
 					// the "Access-Control-Request-Method" header treat it as
 					// a pre-flight request
 					if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
-						w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, PUT, PATCH, DELETE")
-						w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+						w.Header().Set("Access-Control-Allow-Headers", "Content-Type, withCredentials")
+						w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, GET, PUT, PATCH, DELETE")
 
 						// write the headers along with a 200 OK status and return from the middleware
 						// with no further action
