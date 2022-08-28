@@ -108,9 +108,15 @@ production/setup:
 production/connect:
 	ssh ${production_username}@${production_host_ip}
 
-## production/deploy/api: deploy api to production server
-.PHONY: production/deploy/api
-production/deploy/api: production/connect
+## production/deploy/api-starter: deploy api to production server as starter
+.PHONY: production/deploy/api-starter
+production/deploy/api-starter: production/connect
+	rsync -rP --delete ./bin/linux_amd64/api ./migrations ${production_username}@${production_host_ip}:~
+	ssh -t ${production_username}@${production_host_ip} 'migrate -path ~/migrations -database $$CINEVIE_DB_DSN up'
+
+## production/deploy/api-update: deploy api to production server as update
+.PHONY: production/deploy/api-update
+production/deploy/api-update:
 	rsync -rP --delete ./bin/linux_amd64/api ./migrations ${production_username}@${production_host_ip}:~
 	ssh -t ${production_username}@${production_host_ip} 'migrate -path ~/migrations -database $$CINEVIE_DB_DSN up'
 
@@ -134,8 +140,8 @@ production/configure/caddyfile:
 
 ## production/update: update binary and configuration on production machine
 .PHONY: production/update
-production/update: production/deploy/api production/configure/api.service production/configure/caddyfile
+production/update: production/deploy/api-update production/configure/api.service production/configure/caddyfile
 
 ## production/all: run the entire setup and configurations for a ready to use production REST API
 .PHONY: production/all
-production/all: production/setup production/deploy/api production/configure/api.service production/configure/caddyfile
+production/all: production/setup production/deploy/api-starter production/configure/api.service production/configure/caddyfile
