@@ -24,7 +24,6 @@ func (app *application) contextSetUser(r *http.Request, user *data.User) *http.R
 
 // use when expect there to be User struct value in the context, and if
 // it doesn't exist, it will firmly be an 'unexpected' error
-// as we discussed earlier in the book, it's OK to panic in those circumstances
 func (app *application) contextGetUser(r *http.Request) *data.User {
 	user, ok := r.Context().Value(userContextKey).(*data.User)
 	if !ok {

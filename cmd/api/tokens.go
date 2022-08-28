@@ -1,7 +1,6 @@
 package main
 
 import (
-//  	"fmt"
 	"errors"
 	"net/http"
 	"time"
@@ -145,16 +144,17 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		return
 	}
 
-	// encode the token to JSON and send it in the response along with a 201 status code
-	/* http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{
 	  Name: "session_token",
 	  Value: token.Plaintext,
 	  Expires: token.Expiry,
+      Secure:   true,
+      SameSite: http.SameSiteNoneMode,
+      HttpOnly: true,
+      Path: "/",
 	})
-	fmt.Printf("token type is %s\n", token.Plaintext)
-	*/
 
-	err = app.writeJSON(w, http.StatusCreated, envelope{"authentication_token": token}, nil)
+	err = app.writeJSON(w, http.StatusCreated, envelope{"authentication": "Success"}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
