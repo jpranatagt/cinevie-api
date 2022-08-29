@@ -160,6 +160,46 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 	}
 }
 
+// logout: delete an existing token and send an empty session_token
+func (app *application) deleteAuthenticationTokenHandler(w http.ResponseWriter, r *http.Request) {
+    token, err := r.Cookie("session_token")
+    if err != nil {
+      if err == http.ErrNoCookie {
+		app.invalidCredentialsResponse(w, r)
+
+        return
+      }
+
+      app.badRequestResponse(w, r, err)
+
+      return
+    }
+
+    tokenPlaintext := token.Value
+
+    err = app.models.Tokens.DeleteToken(data.ScopeAuthentication, tokenPlaintext)
+
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+	  Name: "session_token",
+	  Value: "",
+	  Expires: time.Now(),
+      Secure:   true,
+      SameSite: http.SameSiteNoneMode,
+      HttpOnly: true,
+      Path: "/",
+	})
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"logout": "Success"}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
 // generate a password reset and send it to the user's email address
 func (app *application) createPasswordResetTokenHandler(w http.ResponseWriter, r *http.Request) {
 	// parse and validate the user's email address

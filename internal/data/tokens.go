@@ -109,3 +109,26 @@ func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
 
 	return err
 }
+
+// delete a token for a specific user and scope
+// (*for logout at this time)
+func (m TokenModel) DeleteToken(tokenScope, tokenPlaintext string) error {
+	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
+
+  query := `
+  	DELETE FROM tokens
+	WHERE hash = $1 and scope = $2
+  `
+
+  args := []interface{}{
+	tokenHash[:],
+	tokenScope,
+  }
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	_, err := m.DB.ExecContext(ctx, query, args...)
+
+	return err
+}

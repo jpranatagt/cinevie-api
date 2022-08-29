@@ -45,6 +45,7 @@ func (app *application) routes() http.Handler {
 	// tokens
 	router.HandlerFunc(http.MethodPost, "/v1/tokens/activation", app.createActivationTokenHandler)
 	router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthenticationTokenHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/tokens/logout", app.requireAuthenticatedUser(app.deleteAuthenticationTokenHandler))
 	router.HandlerFunc(http.MethodPost, "/v1/tokens/password-reset", app.createPasswordResetTokenHandler)
 
 	// add the enableCORS() middleware
