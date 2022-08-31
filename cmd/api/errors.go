@@ -71,6 +71,12 @@ func (app *application) invalidCredentialsResponse(w http.ResponseWriter, r *htt
 	app.errorResponse(w, r, http.StatusUnauthorized, message)
 }
 
+func (app *application) invalidEmailOrPasswordResponse(w http.ResponseWriter, r *http.Request) {
+	message := "wrong email or password."
+
+	app.errorResponse(w, r, http.StatusUnauthorized, message)
+}
+
 func (app *application) invalidAuthenticationTokenResponse(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("WWW-Authenticate", "Bearer") // inform the client to authenticate using bearer token
 

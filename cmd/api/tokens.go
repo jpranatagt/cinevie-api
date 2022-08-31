@@ -111,7 +111,7 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			app.invalidCredentialsResponse(w, r)
+			app.wrongEmailOrPasswordResponse(w, r)
 		default:
 			app.serverErrorResponse(w, r, err)
 		}
@@ -129,7 +129,7 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 
 	// if the password didn't match then call invalidCredentialsResponse again
 	if !match {
-		app.invalidCredentialsResponse(w, r)
+		app.wrongEmailOrPasswordResponse(w, r)
 
 		return
 	}
