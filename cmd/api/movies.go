@@ -17,8 +17,8 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		Description string   `json:"description"`
 		Cover       string   `json:"cover"`
 		Trailer     string   `json:"trailer"`
-		Year        int32    `json:"year"`
-		Runtime     int32    `json:"runtime"`
+		Year        int32    `json:"year,string"`
+		Runtime     int32    `json:"runtime,string"`
 		Genres      []string `json:"genres"`
 		Stars       []string `json:"stars"`
 	}
@@ -148,8 +148,8 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		Description *string  `json:"description"`
 		Cover       *string  `json:"cover"`
 		Trailer     *string  `json:"trailer"`
-		Year        *int32   `json:"year"`
-		Runtime     *int32   `json:"runtime"`
+		Year        *int32   `json:"year,string"`
+		Runtime     *int32   `json:"runtime,string"`
 		Genres      []string `json:"genres"`
 		Stars       []string `json:"stars"`
 	}
