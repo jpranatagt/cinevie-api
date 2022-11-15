@@ -1,6 +1,6 @@
 [Unit]
 # short description in human-readable name for the service
-Description=Greenlight API service
+Description=Cinevie API service
 
 # wait until PostgreSQL is running and the network is "up" before starting the service
 After=postgresql.service
