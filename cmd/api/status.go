@@ -19,8 +19,8 @@ func (app *application) statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// granting permission for browser based client to access movies resource
-func (app *application) permissionHandler(w http.ResponseWriter, r *http.Request) {
+// granting permissions for browser based client to access movies resource
+func (app *application) permissionsHandler(w http.ResponseWriter, r *http.Request) {
   // retrieve the user from request context
   user := app.contextGetUser(r)
 
@@ -32,22 +32,8 @@ func (app *application) permissionHandler(w http.ResponseWriter, r *http.Request
       return
   }
 
-  var grantedPermission = ""
-
-  moviesRead := "movies:read"
-  moviesWrite := "movies:write"
-
-  // check if the slice includes the specified permission
-  if permissions.Include(moviesRead) {
-    grantedPermission = moviesRead
-  }
-
-  if permissions.Include(moviesWrite) {
-    grantedPermission = moviesWrite
-  }
-
   // if there are no granted permission exist then response with empty string
-  err = app.writeJSON(w, http.StatusOK, envelope{"permission": grantedPermission}, nil)
+  err = app.writeJSON(w, http.StatusOK, envelope{"permissions": permissions}, nil)
   if err != nil {
       app.serverErrorResponse(w, r, err)
   }

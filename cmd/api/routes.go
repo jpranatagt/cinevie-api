@@ -31,7 +31,7 @@ func (app *application) routes() http.Handler {
 	router.Handler(http.MethodGet, "/metrics", expvar.Handler())
 
     // granting permission to browser based client
-    router.HandlerFunc(http.MethodGet, "/v1/permission", app.permissionHandler)
+    router.HandlerFunc(http.MethodGet, "/v1/permissions", app.permissionsHandler)
 
 	// movies
 	router.HandlerFunc(http.MethodGet, "/v1/movies", app.requirePermission("movies:read", app.listMoviesHandler))
