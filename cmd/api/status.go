@@ -32,6 +32,10 @@ func (app *application) permissionsHandler(w http.ResponseWriter, r *http.Reques
       return
   }
 
+  if len(permissions) == 0 {
+    permissions = []string{}
+  }
+
   // if there are no granted permission exist then response with empty string
   err = app.writeJSON(w, http.StatusOK, envelope{"permissions": permissions}, nil)
   if err != nil {
