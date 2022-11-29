@@ -97,7 +97,7 @@ func main() {
 	flag.IntVar(&cfg.smtp.port, "smtp-port", 2525, "SMTP port")
 	flag.StringVar(&cfg.smtp.username, "smtp-username", "acdca05b068c66", "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", "d795c443f1a147", "SMTP password")
-	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.jpranata.tech>", "SMTP sender")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Cinevie <no-reply@cinevie.jpranata.tech>", "SMTP sender")
 
 	// cors
 	flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated).", func(val string) error {

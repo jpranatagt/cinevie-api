@@ -2,6 +2,10 @@
   email jepri@jpranata.tech
 }
 
+cinevie.jpranata.tech {
+ reverse_proxy localhost:8080
+}
+
 api.cinevie.jpranata.tech {
   respond /metrics "Not Permitted" 403
   reverse_proxy localhost:4000
