@@ -275,10 +275,10 @@ func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request
 
 	// get the page and page_size as integers
 	input.Filters.Page = app.readInt(qs, "page", 1, v)
-	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
+	input.Filters.PageSize = app.readInt(qs, "page_size", 15, v)
 
 	// extract sort format
-	input.Filters.Sort = app.readString(qs, "sort", "id")
+	input.Filters.Sort = app.readString(qs, "sort", "-year")
 	// supported sort values for this endpoint to the sort safe list
 	input.Filters.SortSafelist = []string{"id", "title", "year", "runtime", "-id", "-title", "-year", "-runtime"}
 
